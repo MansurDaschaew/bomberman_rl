@@ -57,36 +57,62 @@ def act(self, game_state: dict) -> str:
     options = []
 
     features = state_to_features(game_state)
+    print(features)
+    print(game_state["self"][3])
     for action in ACTIONS:
         new_state = copy.deepcopy(game_state)
         if action == "UP":#and game_state["field"][game_state["self"][3][0], game_state["self"][3][1] -1] != -1:
-            new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0], game_state["self"][3][1]-1])])
-            #print(state_to_features(game_state), state_to_features(new_state))
-            options += [self.V[tuple(state_to_features(new_state))]]
+            if not features[2]:
+                options += [-np.Inf]
+            else:
+                new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0], game_state["self"][3][1]-1])])
+                options += [self.V[tuple(state_to_features(new_state))]]
+                print("UP", new_state["self"][3], state_to_features(new_state),self.V[tuple(state_to_features(new_state))])
         if action == "RIGHT":# and game_state["field"][game_state["self"][3][0] + 1, game_state["self"][3][1]] != -1:
-            new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0] + 1, game_state["self"][3][1]])])
-            options += [self.V[tuple(state_to_features(new_state))]]
+            if not features[1]:
+                options += [-np.Inf]
+            else:
+                new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0] + 1, game_state["self"][3][1]])])
+                options += [self.V[tuple(state_to_features(new_state))]]
+                print("RIGHT", new_state["self"][3], state_to_features(new_state),self.V[tuple(state_to_features(new_state))])
         if action == "DOWN":# and game_state["field"][game_state["self"][3][0], game_state["self"][3][1] + 1] != -1:
-            new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0], game_state["self"][3][1]+1])])
-            options += [self.V[tuple(state_to_features(new_state))]]
+            if not features[3]:
+                options += [-np.Inf]
+            else:
+                new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0], game_state["self"][3][1]+1])])
+                options += [self.V[tuple(state_to_features(new_state))]]
+                print("DOWN", new_state["self"][3], state_to_features(new_state),self.V[tuple(state_to_features(new_state))])
         if action == "LEFT": # and game_state["field"][game_state["self"][3][0] - 1, game_state["self"][3][1]] != -1:
-            new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0] - 1, game_state["self"][3][1]])])
-            options += [self.V[tuple(state_to_features(new_state))]]
+            if not features[0]:
+                options += [-np.Inf]
+            else:
+                new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0] - 1, game_state["self"][3][1]])])
+                options += [self.V[tuple(state_to_features(new_state))]]
+                print("LEFT", new_state["self"][3], state_to_features(new_state),self.V[tuple(state_to_features(new_state))])
         #if action == "WAIT":
             #options += [self.V[tuple(state_to_features(new_state))]]
     options = np.array(options)
+    #print(options)
+    
+    #options = options/options[options != np.Inf].sum()
+    #print(options)
+    #print(options)
+    #options[options == -np.Inf] = 0
+    #print(options)
 
     allowed_directions = features[:4][[2,1,3,0]]
-    reduced_options = options[allowed_directions.astype(bool) & (options != 0)]
-    #reduced_options = options
+    #reduced_options = options[allowed_directions.astype(bool) & (options != 0)]
+    #reduced_options = options[(options != 0)]
+    reduced_options = options
     #print(options[options != 0])
-    print(state_to_features(game_state))
+    #print(state_to_features(game_state))
     print(options, np.argmax(reduced_options))
     print(ACTIONS[list(options).index(reduced_options[np.argmax(reduced_options)])])
     return ACTIONS[list(options).index(reduced_options[np.argmax(reduced_options)])]
 
     #self.logger.debug("Querying model for action.")
-    #return np.random.choice(ACTIONS, p=[.2, .2, .2, .2, .2])
+    options = np.concatenate([options, [0]])
+    return np.random.choice(ACTIONS, p=options)
 
 
 def state_to_features(game_state: dict) -> np.array:

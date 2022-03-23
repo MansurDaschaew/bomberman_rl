@@ -134,7 +134,7 @@ def reward_from_events(self, events: List[str]) -> int:
     """
     game_rewards = {
         e.COIN_COLLECTED: 1,
-        e.INVALID_ACTION: -5,
+        e.INVALID_ACTION: -1,
     }
     reward_sum = 0
     for event in events:
