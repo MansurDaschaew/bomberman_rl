@@ -175,6 +175,7 @@ def state_to_features(game_state: dict) -> np.array:
         elif (np.array(closest_coin_pos) - np.array(agent_pos))[x_or_y] > 0:
             features[4+1] = 1
     features[8] = np.sum(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
+    #test comment
 
     return features.astype(int)
 
