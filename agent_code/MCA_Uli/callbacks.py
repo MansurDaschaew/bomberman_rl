@@ -97,17 +97,22 @@ def act(self, game_state: dict) -> str:
                 self.logger.debug("LEFT " + str(new_state["self"][3]) + " " + str(state_to_features(new_state)) + " " + str(self.V[tuple(state_to_features(new_state))]))
         if action == "WAIT":
             options += [self.V[tuple(state_to_features(new_state))]]
-        #if action == "BOMB":
+        if action == "BOMB":
+            new_features = state_to_features(new_state)
+            new_features[1] = 0
+            new_features[2] = 5
+            options += [self.V[tuple(new_features)]]
+
             
             
     options = np.array(options)
     self.logger.debug("1 " + str(options))
-    #print("Between", ((options == 0) | (options == -np.Inf)).sum())
+    print("Between", ((options == 0) | (options == -np.Inf)).sum())
     if ((options == 0) | (options == -np.Inf)).sum() < 3:
         options[options != 0] = options[options != 0] - min(options[options != -np.Inf])
-    #print(2,options)
+    print(2,options)
     options = np.array(options) + 0.001
-    #print(3,options)
+    print(3,options)
     options = options/options[options != -np.Inf].sum()
     options[options == -np.Inf] = 0
 
@@ -117,7 +122,7 @@ def act(self, game_state: dict) -> str:
     #self.logger.debug("Querying model for action.")
     options = np.concatenate([options])
     action = np.random.choice(ACTIONS, p=options)
-    #print(action)
+    print(action)
     return action
 
 
@@ -158,9 +163,16 @@ def state_to_features(game_state: dict) -> np.array:
     #find closest bomb
     if len(game_state["bombs"]) == 0:
         features[1] = -1
+        features[2] = -1
     else:
         bomb_map = np.array(game_state["bombs"])[:,0]
-        print(np.array([[x[0],x[1]] for x in bomb_map]) - np.array(agent_pos))
+        d = np.array([[x[0],x[1]] for x in np.array(game_state["bombs"])[:,0]]) - np.array(agent_pos)
+        features[1] = np.sum(np.abs(d[np.argmin(np.sum(d**2))]))
+        features[2] = np.array(game_state["bombs"])[:,1][np.argmin(np.sum(d**2))]
+        
+        #print(features, game_state["bombs"], agent_pos)
+
+
         #bomb_map = np.array([np.array(game_state["bombs"][:][0]), game_state["bombs"][:][1]])
         #print(bomb_map)
 

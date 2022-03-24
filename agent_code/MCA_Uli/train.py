@@ -37,8 +37,8 @@ def setup_training(self):
     self.Transitions = []
 
     self.V = np.zeros([2,2,2,2,2,2,2,2])
-    self.V = {tuple([i,j,k]):float() for i in range(-1, 30) for j in range(-1,30) for k in range(0,5)}
-    self.returns = {tuple([i,j,k]):list() for i in range(-1,30) for j in range(-1,30) for k in range(0,5)}
+    self.V = {tuple([i,j,k]):float() for i in range(-1, 30) for j in range(-1,30) for k in range(-1,6)}
+    self.returns = {tuple([i,j,k]):list() for i in range(-1,30) for j in range(-1,30) for k in range(-1,6)}
 
     if os.path.isfile("my-saved-model.pt"):
         print("model found")
@@ -136,7 +136,10 @@ def reward_from_events(self, events: List[str]) -> int:
         e.COIN_COLLECTED: 1,
         #e.INVALID_ACTION: -1,
         # slightly discourage waiting
-        e.WAITED: -0.1
+        e.WAITED: -0.1,
+        e.BOMB_DROPPED: 2,
+        e.KILLED_SELF: -10,
+        e.GOT_KILLED: -5,
     }
     reward_sum = 0
     for event in events:
