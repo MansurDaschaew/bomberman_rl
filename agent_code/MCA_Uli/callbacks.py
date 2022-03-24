@@ -7,7 +7,7 @@ import numpy as np
 import copy
 
 
-ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT']
+ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 
 
 def setup(self):
@@ -53,7 +53,9 @@ def act(self, game_state: dict) -> str:
     if self.train: #and random.random() < random_prob:
         self.logger.debug("Choosing action purely at random.")
         # 80%: walk in any direction. 10% wait. 10% bomb.
-        return np.random.choice(ACTIONS, p=[.2, .2, .2, .2, .2])
+        return np.random.choice(ACTIONS, p=[.2, .2, .2, .2, .1, .1])
+
+    print(game_state["bombs"])
     
 
     options = []
@@ -93,8 +95,11 @@ def act(self, game_state: dict) -> str:
                 new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0] - 1, game_state["self"][3][1]])])
                 options += [self.V[tuple(state_to_features(new_state))]]
                 self.logger.debug("LEFT " + str(new_state["self"][3]) + " " + str(state_to_features(new_state)) + " " + str(self.V[tuple(state_to_features(new_state))]))
-        #if action == "WAIT":
-            #options += [self.V[tuple(state_to_features(new_state))]]
+        if action == "WAIT":
+            options += [self.V[tuple(state_to_features(new_state))]]
+        #if action == "BOMB":
+            
+            
     options = np.array(options)
     self.logger.debug("1 " + str(options))
     #print("Between", ((options == 0) | (options == -np.Inf)).sum())
@@ -110,7 +115,7 @@ def act(self, game_state: dict) -> str:
     #print(options, np.argmax(reduced_options))
 
     #self.logger.debug("Querying model for action.")
-    options = np.concatenate([options, [0]])
+    options = np.concatenate([options])
     action = np.random.choice(ACTIONS, p=options)
     #print(action)
     return action
@@ -130,7 +135,9 @@ def state_to_features(game_state: dict) -> np.array:
     :param game_state:  A dictionary describing the current game board.
     :return: np.array
     """
-    features = np.zeros([1])
+
+    # features: [distance to closest coin, distance to closest bomb, timeout of closest bomb]
+    features = np.zeros([3])
     # This is the dict before the game begins and after it ends
     if game_state is None:
         return None
@@ -142,15 +149,21 @@ def state_to_features(game_state: dict) -> np.array:
 
 
     # find closest coin
-    #print(len(game_state["coins"]),agent_pos)
     if len(game_state["coins"]) == 0:
         features[0] = -1
     else:
         closest_coin_pos = game_state["coins"][np.argmin(((game_state["coins"]-np.array(agent_pos))**2).sum(axis=1))]
-
-    # check if closest coin is in x or y direction
         features[0] = np.sum(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
-    #test comment
+
+    #find closest bomb
+    if len(game_state["bombs"]) == 0:
+        features[1] = -1
+    else:
+        bomb_map = np.array([np.array(game_state["bombs"][:][0]), game_state["bombs"][:][1]])
+        print(bomb_map)
+
+        
+
 
     return features.astype(int)
 
