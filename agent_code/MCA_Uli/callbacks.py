@@ -159,8 +159,10 @@ def state_to_features(game_state: dict) -> np.array:
     if len(game_state["bombs"]) == 0:
         features[1] = -1
     else:
-        bomb_map = np.array([np.array(game_state["bombs"][:][0]), game_state["bombs"][:][1]])
-        print(bomb_map)
+        bomb_map = np.array(game_state["bombs"])[:,0]
+        print(np.array([[x[0],x[1]] for x in bomb_map]) - np.array(agent_pos))
+        #bomb_map = np.array([np.array(game_state["bombs"][:][0]), game_state["bombs"][:][1]])
+        #print(bomb_map)
 
         
 
