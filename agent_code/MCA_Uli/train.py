@@ -48,7 +48,7 @@ def setup_training(self):
         #print(len(self.V.keys()))
         nz = 0
         for state in self.V.keys():
-            if self.V[state] != 0:
+            if self.V[state] != [0.,0.,0.]:
                 #print(state, self.V[state])
                 nz += 1
         print("Found %s nonzero entries" % nz)
@@ -138,6 +138,8 @@ def reward_from_events(self, events: List[str]) -> int:
         # slightly discourage waiting
         e.WAITED: -0.1,
         e.BOMB_DROPPED: 2,
+        e.KILLED_OPPONENT: 5,
+        e.OPPONENT_ELIMINATED: 0.5,
         e.KILLED_SELF: -10,
         e.GOT_KILLED: -5,
     }
