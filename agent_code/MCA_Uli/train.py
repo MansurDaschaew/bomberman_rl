@@ -37,8 +37,8 @@ def setup_training(self):
     self.Transitions = []
 
     self.V = np.zeros([2,2,2,2,2,2,2,2])
-    self.V = {(i,j,k,l,m,n,o,p,q):float() for i in range(2) for j in range(2) for k in range(2) for l in range(2) for m in range(2) for n in range(2) for o in range(2) for p in range(2) for q in range(30)}
-    self.returns = {(i,j,k,l,m,n,o,p,q):list() for i in range(2) for j in range(2) for k in range(2) for l in range(2) for m in range(2) for n in range(2) for o in range(2) for p in range(2) for q in range(30)}
+    self.V = {tuple([i]):float() for i in range(-1, 30)}
+    self.returns = {tuple([i]):list() for i in range(-1,30)}
 
     if os.path.isfile("my-saved-model.pt"):
         print("model found")
@@ -109,8 +109,8 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
         #print(i, step[0])
         #print(self.Transitions[::-1][len(self.Transitions)-i - 1:][0])
         if tuple(step[0]) not in [tuple(x[0]) for x in self.Transitions[::-1][len(self.Transitions) - i - 1:]]:
-            self.returns[tuple(step[0].astype(int))].append(G)
-            self.V[tuple(step[0].astype(int))] = np.average(self.returns[tuple(step[0])])
+            self.returns[tuple(step[0])].append(G)
+            self.V[tuple(step[0])] = np.average(self.returns[tuple(step[0])])
 
         #print(self.V[tuple(idx[0].astype(int))])               
         pass
@@ -134,7 +134,7 @@ def reward_from_events(self, events: List[str]) -> int:
     """
     game_rewards = {
         e.COIN_COLLECTED: 1,
-        e.INVALID_ACTION: -1,
+        #e.INVALID_ACTION: -1,
     }
     reward_sum = 0
     for event in events:

@@ -32,6 +32,8 @@ def setup(self):
         self.logger.info("Loading model from saved state.")
         with open("my-saved-model.pt", "rb") as file:
             (self.V, self.returns) = pickle.load(file)
+        
+        self.V[(0,)] = 1
 
 
 def act(self, game_state: dict) -> str:
@@ -57,62 +59,61 @@ def act(self, game_state: dict) -> str:
     options = []
 
     features = state_to_features(game_state)
-    print(features)
-    print(game_state["self"][3])
+
+    agent_pos = np.array(game_state["self"][3])
+    #print("V", self.V)
+    #print("pos:",agent_pos,game_state["field"][tuple(agent_pos)])
     for action in ACTIONS:
         new_state = copy.deepcopy(game_state)
         if action == "UP":#and game_state["field"][game_state["self"][3][0], game_state["self"][3][1] -1] != -1:
-            if not features[2]:
+            if game_state["field"][tuple(agent_pos + [0,-1])] != 0:
                 options += [-np.Inf]
             else:
                 new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0], game_state["self"][3][1]-1])])
                 options += [self.V[tuple(state_to_features(new_state))]]
-                print("UP", new_state["self"][3], state_to_features(new_state),self.V[tuple(state_to_features(new_state))])
+                self.logger.debug("UP " + str(new_state["self"][3])  + " " + str(state_to_features(new_state))  + " " + str(self.V[tuple(state_to_features(new_state))]))
         if action == "RIGHT":# and game_state["field"][game_state["self"][3][0] + 1, game_state["self"][3][1]] != -1:
-            if not features[1]:
+            if game_state["field"][tuple(agent_pos + [1,0])] != 0:
                 options += [-np.Inf]
             else:
                 new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0] + 1, game_state["self"][3][1]])])
                 options += [self.V[tuple(state_to_features(new_state))]]
-                print("RIGHT", new_state["self"][3], state_to_features(new_state),self.V[tuple(state_to_features(new_state))])
+                self.logger.debug("RIGHT " + str(new_state["self"][3]) + " " + str(state_to_features(new_state)) + " " + str(self.V[tuple(state_to_features(new_state))]))
         if action == "DOWN":# and game_state["field"][game_state["self"][3][0], game_state["self"][3][1] + 1] != -1:
-            if not features[3]:
+            if game_state["field"][tuple(agent_pos + [0,1])] != 0:
                 options += [-np.Inf]
             else:
                 new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0], game_state["self"][3][1]+1])])
                 options += [self.V[tuple(state_to_features(new_state))]]
-                print("DOWN", new_state["self"][3], state_to_features(new_state),self.V[tuple(state_to_features(new_state))])
+                self.logger.debug("DOWN " + str(new_state["self"][3]) + " " + str(state_to_features(new_state)) + " " + str(self.V[tuple(state_to_features(new_state))]))
         if action == "LEFT": # and game_state["field"][game_state["self"][3][0] - 1, game_state["self"][3][1]] != -1:
-            if not features[0]:
+            if game_state["field"][tuple(agent_pos + [-1,0])] != 0:
                 options += [-np.Inf]
             else:
                 new_state["self"] = tuple(list(game_state["self"][:3]) +  [tuple([game_state["self"][3][0] - 1, game_state["self"][3][1]])])
                 options += [self.V[tuple(state_to_features(new_state))]]
-                print("LEFT", new_state["self"][3], state_to_features(new_state),self.V[tuple(state_to_features(new_state))])
+                self.logger.debug("LEFT " + str(new_state["self"][3]) + " " + str(state_to_features(new_state)) + " " + str(self.V[tuple(state_to_features(new_state))]))
         #if action == "WAIT":
             #options += [self.V[tuple(state_to_features(new_state))]]
     options = np.array(options)
-    #print(options)
-    
-    #options = options/options[options != np.Inf].sum()
-    #print(options)
-    #print(options)
-    #options[options == -np.Inf] = 0
-    #print(options)
+    self.logger.debug("1 " + str(options))
+    #print("Between", ((options == 0) | (options == -np.Inf)).sum())
+    if ((options == 0) | (options == -np.Inf)).sum() < 3:
+        options[options != 0] = options[options != 0] - min(options[options != -np.Inf])
+    #print(2,options)
+    options = np.array(options) + 0.001
+    #print(3,options)
+    options = options/options[options != -np.Inf].sum()
+    options[options == -np.Inf] = 0
 
-    allowed_directions = features[:4][[2,1,3,0]]
-    #reduced_options = options[allowed_directions.astype(bool) & (options != 0)]
-    #reduced_options = options[(options != 0)]
     reduced_options = options
-    #print(options[options != 0])
-    #print(state_to_features(game_state))
-    print(options, np.argmax(reduced_options))
-    print(ACTIONS[list(options).index(reduced_options[np.argmax(reduced_options)])])
-    return ACTIONS[list(options).index(reduced_options[np.argmax(reduced_options)])]
+    #print(options, np.argmax(reduced_options))
 
     #self.logger.debug("Querying model for action.")
     options = np.concatenate([options, [0]])
-    return np.random.choice(ACTIONS, p=options)
+    action = np.random.choice(ACTIONS, p=options)
+    #print(action)
+    return action
 
 
 def state_to_features(game_state: dict) -> np.array:
@@ -129,7 +130,7 @@ def state_to_features(game_state: dict) -> np.array:
     :param game_state:  A dictionary describing the current game board.
     :return: np.array
     """
-    features = np.zeros([9])
+    features = np.zeros([1])
     # This is the dict before the game begins and after it ends
     if game_state is None:
         return None
@@ -139,42 +140,16 @@ def state_to_features(game_state: dict) -> np.array:
     # Find walkable directions -> left right up down
     agent_pos = game_state["self"][3]
 
-    if agent_pos == (15,16) or agent_pos == (16,15):
-        agent_pos = (15,15)
-
-    # As Wall is marked as -1 and Path 1, respectively, we cann add one (for now)
-    # To find out if we can walk in a direction or not
-    #if game_state["step"] == 1 or game_state["step"] == 2:
-        #print(agent_pos, game_state["field"][agent_pos])
-    features[0] = game_state["field"][agent_pos[0]-1, agent_pos[1]] + 1
-    features[1] = game_state["field"][agent_pos[0]+1, agent_pos[1]] + 1
-    features[2] = game_state["field"][agent_pos[0], agent_pos[1] - 1] + 1
-    features[3] = game_state["field"][agent_pos[0], agent_pos[1] + 1] + 1
-    
-
-    # Another Feature: find direction of closest coin (up down left right)
-    # Square Sum of position difference and find minimal distance coin
-    # TODO (optionally): Allow multiple coins that have the same
-    #      distance and then allow multiple directions
 
     # find closest coin
-    closest_coin_pos = game_state["coins"][np.argmin(((game_state["coins"]-np.array(agent_pos))**2).sum(axis=1))]
+    #print(len(game_state["coins"]),agent_pos)
+    if len(game_state["coins"]) == 0:
+        features[0] = -1
+    else:
+        closest_coin_pos = game_state["coins"][np.argmin(((game_state["coins"]-np.array(agent_pos))**2).sum(axis=1))]
 
     # check if closest coin is in x or y direction
-    x_or_y = np.argmax(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
-
-    # depending on X or Y directions, check if left/right or up/down
-    if x_or_y:
-        if (np.array(closest_coin_pos) - np.array(agent_pos))[x_or_y] < 0:
-            features[4+2] = 1
-        elif (np.array(closest_coin_pos) - np.array(agent_pos))[x_or_y] > 0:
-            features[4+3] = 1
-    else:
-        if (np.array(closest_coin_pos) - np.array(agent_pos))[x_or_y] < 0:
-            features[4+0] = 1
-        elif (np.array(closest_coin_pos) - np.array(agent_pos))[x_or_y] > 0:
-            features[4+1] = 1
-    features[8] = np.sum(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
+        features[0] = np.sum(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
     #test comment
 
     return features.astype(int)
