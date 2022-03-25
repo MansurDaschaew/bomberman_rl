@@ -176,7 +176,7 @@ def state_to_features(game_state: dict, events = None) -> np.array:
     """
 
     # features: [distance to closest coin, in bomb range, timeout of closest bomb, distance to closest bomb]
-    features = np.zeros([4])
+    features = np.zeros([5])
     # This is the dict before the game begins and after it ends
     if game_state is None:
         return None
@@ -214,6 +214,33 @@ def state_to_features(game_state: dict, events = None) -> np.array:
         features[1] = int(agent_pos in bomb_fields)
         #print(timers, np.argmin(np.sum(d**2,axis=1)))
         features[2] =  timers[np.argmin(np.sum(d**2,axis=1))]
+    
+    # Enemy distance
+    if not game_state["others"] or len(game_state["others"]) == 0:
+        features[4] = -1
+    else:        
+        #others_fields = np.array(game_state["others"])[:,3]
+        others_fields = np.array([[x[3][0], x[3][1]] for x in game_state["others"]])
+        d = others_fields - np.array(agent_pos)
+        min_dist = np.sum(np.abs(d[np.argmin(np.sum(d**2,axis=1))]))
+        features[4] = np.min([9, min_dist])
+
+
+        #print(others_fields, agent_pos, d, min_dist)
+
+        """
+        bomb_fields = np.array([(x[0] + i, x[1]) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
+                + [(x[0], x[1] + i) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER, s.BOMB_POWER + 1)])
+        #print(bomb_map,bomb_fields, agent_pos in bomb_fields)
+        #print(timers)
+        d = np.array([[x[0],x[1]] for x in np.array(game_state["bombs"])[:,0]]) - np.array(agent_pos)
+        #print(d,d[np.argmin(np.sum(d**2,axis=1))])
+        #print(np.min(s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))))
+        features[3] = np.min([s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))])
+        #print(agent_pos,bomb_map, bomb_fields, agent_pos in bomb_fields)
+        features[1] = int(agent_pos in bomb_fields)
+        #print(timers, np.argmin(np.sum(d**2,axis=1)))
+        features[2] =  timers[np.argmin(np.sum(d**2,axis=1))]"""
 
     #if not game_state["others"]:
     #    closest_enemy_pos = 
