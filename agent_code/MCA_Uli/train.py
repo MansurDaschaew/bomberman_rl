@@ -107,9 +107,12 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     start = datetime.now()
 
+    #print("Last game feat", state_to_features(last_game_state,events), events)
+
     G = 0
     for i, step in enumerate(self.Transitions[:-1][::-1]):
         G = self.gamma*G + step[3]
+        #print(G,step[3],events)
         if tuple(step[2]) not in [tuple(x[2]) for x in self.Transitions[:-1][::-1][len(self.Transitions) - i - 1:]]:
             self.returns[tuple(step[2])].append(G)
             self.V[tuple(step[2])] = np.average(self.returns[tuple(step[2])])
@@ -135,20 +138,20 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED: 1,
+        #e.COIN_COLLECTED: 1,
         #e.INVALID_ACTION: -1,
         # slightly discourage waiting
         #e.WAITED: -0.1,
-        e.BOMB_DROPPED: -1,
-        #e.KILLED_OPPONENT: 1,
+        #e.BOMB_DROPPED: -3,
+        e.KILLED_OPPONENT: 10,
         #e.SURVIVED_ROUND: 1,
-        #e.OPPONENT_ELIMINATED: 1,
-        e.KILLED_SELF: -5,
-        e.GOT_KILLED: -1,
-        e.MOVED_IN_BOMB_RANGE: -1,
-        e.MOVED_OUT_BOMB_RANGE: 2,
-        e.STAYED_OUT_BOMB_RANGE: 0.1,
-        e.STAYED_IN_BOMB_RANGE: -0.25,
+        #e.OPPONENT_ELIMINATED: 5,
+        e.KILLED_SELF: -20,
+        #e.GOT_KILLED: -1,
+        #e.MOVED_IN_BOMB_RANGE: -1,
+        #e.MOVED_OUT_BOMB_RANGE: 2,
+        #e.STAYED_OUT_BOMB_RANGE: 0.1,
+        #e.STAYED_IN_BOMB_RANGE: -0.25,
     }
     reward_sum = 0
     for event in events:

@@ -207,10 +207,16 @@ def state_to_features(game_state: dict, events = None) -> np.array:
         #print(bomb_map,bomb_fields, agent_pos in bomb_fields)
         #print(timers)
         d = np.array([[x[0],x[1]] for x in np.array(game_state["bombs"])[:,0]]) - np.array(agent_pos)
-        features[3] = np.sum(np.abs(d[np.argmin(np.sum(d**2))]))
+        #print(d,d[np.argmin(np.sum(d**2,axis=1))])
+        #print(np.min(s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))))
+        features[3] = np.min([s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))])
         #print(agent_pos,bomb_map, bomb_fields, agent_pos in bomb_fields)
         features[1] = int(agent_pos in bomb_fields)
-        features[2] =  timers[np.argmin(np.sum(d**2))]
+        #print(timers, np.argmin(np.sum(d**2,axis=1)))
+        features[2] =  timers[np.argmin(np.sum(d**2,axis=1))]
+
+    #if not game_state["others"]:
+    #    closest_enemy_pos = 
     if events:
         if e.COIN_COLLECTED in events:
             features[0] = 0
@@ -223,7 +229,7 @@ def state_to_features(game_state: dict, events = None) -> np.array:
 
         
 
-
+    #print(features)
     return features.astype(int)
 
 
