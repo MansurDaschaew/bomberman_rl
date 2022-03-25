@@ -39,8 +39,6 @@ def setup_training(self):
 
     self.V = np.zeros([2,2,2,2,2,2,2,2])
     self.V = {tuple([i,j,k,l]):float() for i in range(-1, 30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5)}
-    #self.V = {tuple([i,j,k]):float() for i in range(-1, 10) for j in range(-1,s.BOMB_POWER + 5) for k in range(-1,s.BOMB_TIMER + 1)}
-    #self.returns = {tuple([i,j,k]):list() for i in range(-1,10) for j in range(-1,s.BOMB_POWER + 5) for k in range(-1,s.BOMB_TIMER + 1)}
     self.returns = {tuple([i,j,k,l]):list() for i in range(-1,30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5)}
 
     if os.path.isfile("my-saved-model.pt"):
@@ -107,15 +105,16 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     start = datetime.now()
 
-    print("Last game feat", state_to_features(last_game_state,events), events)
+    #self.logger.debug("Last game feat", state_to_features(last_game_state,events), events, reward_from_events(self,events))
+    #self.logger.debug("Last action",last_action)
 
     G = 0
-    for i, step in enumerate(self.Transitions[:-1][::-1]):
+    for i, step in enumerate(self.Transitions[::-1]):
         G = self.gamma*G + step[3]
-        #print(i,type(step[2]),events)
-        if tuple(step[2]) not in [tuple(x[2]) for x in self.Transitions[:-1][::-1][len(self.Transitions) - i - 1:]]:
-            self.returns[tuple(step[2])].append(G)
-            self.V[tuple(step[2])] = np.average(self.returns[tuple(step[2])])
+        if tuple(step[0]) not in [tuple(x[2]) for x in self.Transitions[::-1][len(self.Transitions) - i:]]:
+            self.returns[tuple(step[0])].append(G)
+            self.logger.debug("SETTING STATE: " + str(step[0]) + " TO Value: " + str(np.average(self.returns[tuple(step[0])])))
+            self.V[tuple(step[0])] = np.average(self.returns[tuple(step[0])])
 
         #print(self.V[tuple(idx[0].astype(int))])               
         pass
@@ -138,18 +137,18 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
-        #e.COIN_COLLECTED: 1,
+        e.COIN_COLLECTED: 5,
         #e.INVALID_ACTION: -1,
         # slightly discourage waiting
         #e.WAITED: -0.1,
         #e.BOMB_DROPPED: -3,
-        #e.KILLED_OPPONENT: 10,
+        e.KILLED_OPPONENT: 30,
         #e.SURVIVED_ROUND: 1,
         #e.OPPONENT_ELIMINATED: 5,
-        e.KILLED_SELF: -20,
+        e.KILLED_SELF: -10,
         #e.GOT_KILLED: -1,
-        #e.MOVED_IN_BOMB_RANGE: -1,
-        #e.MOVED_OUT_BOMB_RANGE: 2,
+        e.MOVED_IN_BOMB_RANGE: -5,
+        e.MOVED_OUT_BOMB_RANGE: 20,
         #e.STAYED_OUT_BOMB_RANGE: 0.1,
         #e.STAYED_IN_BOMB_RANGE: -0.25,
     }
