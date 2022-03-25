@@ -126,6 +126,10 @@ class GenericWorld:
         return is_free
 
     def perform_agent_action(self, agent: Agent, action: str):
+
+        # Custom events
+        agent_pos = (agent.x, agent.y)
+
         # Perform the specified action if possible, wait otherwise
         if action == 'UP' and self.tile_is_free(agent.x, agent.y - 1):
             agent.y -= 1
@@ -148,6 +152,23 @@ class GenericWorld:
             agent.add_event(e.WAITED)
         else:
             agent.add_event(e.INVALID_ACTION)
+
+        if action != "WAIT":
+            new_agent_pos = (agent.x, agent.y)
+            bomb_map = np.array([(bomb.x, bomb.y) for bomb in self.bombs])
+            bomb_map = np.array([(bomb[0] + i, bomb[1]) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
+                    + [(bomb[0], bomb[1] + i) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)])
+            #print(agent_pos, new_agent_pos, [(x.x, x.y) for x in self.bombs], agent_pos in bomb_map,bomb_map)
+            if agent_pos in bomb_map and not new_agent_pos in bomb_map:
+                agent.add_event(e.MOVED_OUT_BOMB_RANGE)
+            elif agent_pos not in bomb_map and new_agent_pos in bomb_map:
+                agent.add_event(e.MOVED_IN_BOMB_RANGE)
+            elif agent_pos in bomb_map and new_agent_pos in bomb_map:
+                agent.add_event(e.STAYED_IN_BOMB_RANGE)
+            elif len(bomb_map) != 0:
+                agent.add_event(e.STAYED_OUT_BOMB_RANGE)
+            
+
 
     def poll_and_run_agents(self):
         raise NotImplementedError()

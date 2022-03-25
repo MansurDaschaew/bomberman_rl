@@ -4,6 +4,7 @@ import pickle
 from typing import List
 
 import events as e
+import settings as s
 from .callbacks import state_to_features
 
 import numpy as np
@@ -33,12 +34,14 @@ def setup_training(self):
 
     # [can move in direction, closest coin direction]
     #self.transitions = deque(maxlen=TRANSITION_HISTORY_SIZE)
-    self.gamma = 0.8
+    self.gamma = 0.6
     self.Transitions = []
 
     self.V = np.zeros([2,2,2,2,2,2,2,2])
-    self.V = {tuple([i,j,k]):float() for i in range(-1, 30) for j in range(-1,30) for k in range(-1,6)}
-    self.returns = {tuple([i,j,k]):list() for i in range(-1,30) for j in range(-1,30) for k in range(-1,6)}
+    self.V = {tuple([i,j,k,l]):float() for i in range(-1, 30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5)}
+    #self.V = {tuple([i,j,k]):float() for i in range(-1, 10) for j in range(-1,s.BOMB_POWER + 5) for k in range(-1,s.BOMB_TIMER + 1)}
+    #self.returns = {tuple([i,j,k]):list() for i in range(-1,10) for j in range(-1,s.BOMB_POWER + 5) for k in range(-1,s.BOMB_TIMER + 1)}
+    self.returns = {tuple([i,j,k,l]):list() for i in range(-1,30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5)}
 
     if os.path.isfile("my-saved-model.pt"):
         print("model found")
@@ -48,8 +51,9 @@ def setup_training(self):
         #print(len(self.V.keys()))
         nz = 0
         for state in self.V.keys():
-            if self.V[state] != [0.,0.,0.]:
-                #print(state, self.V[state])
+            #print(self.V[state])
+            if self.V[state] != 0:
+                print(state, self.V[state])
                 nz += 1
         print("Found %s nonzero entries" % nz)
 
@@ -75,14 +79,14 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     :param events: The events that occurred when going from  `old_game_state` to `new_game_state`
     """
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
-    features = state_to_features(new_game_state)
+    features = state_to_features(new_game_state, events)
     # Idea: Add your own events to hand out rewards
     #if ...:
     #    events.append(PLACEHOLDER_EVENT)
 
     # state_to_features is defined in callbacks.py
     #self.transitions.append(Transition(state_to_features(old_game_state), self_action, state_to_features(new_game_state), reward_from_events(self, events)))
-    self.Transitions += [[state_to_features(old_game_state), self_action, state_to_features(new_game_state), reward_from_events(self, events)]]
+    self.Transitions += [[state_to_features(old_game_state), self_action, state_to_features(new_game_state,events), reward_from_events(self, events)]]
 
 
 def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
@@ -99,18 +103,16 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     :param self: The same object that is passed to all of your callbacks.
     """
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
-    #self.transitions.append(Transition(state_to_features(last_game_state), last_action, None, reward_from_events(self, events)))
+    self.Transitions += [[state_to_features(last_game_state, events), last_action, None, reward_from_events(self, events)]]
 
     start = datetime.now()
 
     G = 0
-    for i, step in enumerate(self.Transitions[::-1]):
+    for i, step in enumerate(self.Transitions[:-1][::-1]):
         G = self.gamma*G + step[3]
-        #print(i, step[0])
-        #print(self.Transitions[::-1][len(self.Transitions)-i - 1:][0])
-        if tuple(step[0]) not in [tuple(x[0]) for x in self.Transitions[::-1][len(self.Transitions) - i - 1:]]:
-            self.returns[tuple(step[0])].append(G)
-            self.V[tuple(step[0])] = np.average(self.returns[tuple(step[0])])
+        if tuple(step[2]) not in [tuple(x[2]) for x in self.Transitions[:-1][::-1][len(self.Transitions) - i - 1:]]:
+            self.returns[tuple(step[2])].append(G)
+            self.V[tuple(step[2])] = np.average(self.returns[tuple(step[2])])
 
         #print(self.V[tuple(idx[0].astype(int))])               
         pass
@@ -120,7 +122,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     saving_start = datetime.now()
     with open("my-saved-model.pt", "wb") as file:
         pickle.dump((self.V, self.returns), file)
-    print(datetime.now()-start, datetime.now() - saving_start)
+    #print(datetime.now()-start, datetime.now() - saving_start)
     self.Transitions = []
 
 
@@ -136,12 +138,17 @@ def reward_from_events(self, events: List[str]) -> int:
         e.COIN_COLLECTED: 1,
         #e.INVALID_ACTION: -1,
         # slightly discourage waiting
-        e.WAITED: -0.1,
-        e.BOMB_DROPPED: 2,
-        e.KILLED_OPPONENT: 5,
-        e.OPPONENT_ELIMINATED: 0.5,
-        e.KILLED_SELF: -10,
-        e.GOT_KILLED: -5,
+        #e.WAITED: -0.1,
+        e.BOMB_DROPPED: -1,
+        #e.KILLED_OPPONENT: 1,
+        #e.SURVIVED_ROUND: 1,
+        #e.OPPONENT_ELIMINATED: 1,
+        e.KILLED_SELF: -5,
+        e.GOT_KILLED: -1,
+        e.MOVED_IN_BOMB_RANGE: -1,
+        e.MOVED_OUT_BOMB_RANGE: 2,
+        e.STAYED_OUT_BOMB_RANGE: 0.1,
+        e.STAYED_IN_BOMB_RANGE: -0.25,
     }
     reward_sum = 0
     for event in events:
