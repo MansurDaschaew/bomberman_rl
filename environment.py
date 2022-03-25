@@ -152,8 +152,11 @@ class GenericWorld:
             agent.add_event(e.WAITED)
         else:
             agent.add_event(e.INVALID_ACTION)
+        
+        # Check if agent got either in Bomb range or got closer to enemy
+        if action != "WAIT" and agent.name == "MCA_Uli":
 
-        if action != "WAIT":
+            # check if agent moved into bomb ranger and fire events
             new_agent_pos = (agent.x, agent.y)
             bomb_map = np.array([(bomb.x, bomb.y) for bomb in self.bombs])
             bomb_map = np.array([(bomb[0] + i, bomb[1]) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
@@ -167,6 +170,22 @@ class GenericWorld:
                 agent.add_event(e.STAYED_IN_BOMB_RANGE)
             elif len(bomb_map) != 0:
                 agent.add_event(e.STAYED_OUT_BOMB_RANGE)
+
+            # check if agent got closer to enemy
+            others =  [other.get_state() for other in self.active_agents if other is not agent]
+            if len(others) != 0:
+            #print("OTHERS:", others)
+                others_fields = np.array([[x[3][0], x[3][1]] for x in others])
+                d_old = others_fields - agent_pos
+                d_new = others_fields - new_agent_pos
+                #print(np.argmin(d_old**2))
+                d_old_min = np.sum(np.abs(d_old[np.argmin(np.sum(d_old**2))]))
+                d_new_min = np.sum(np.abs(d_new[np.argmin(np.sum(d_new**2))]))
+                #print(d_old_min, d_new_min)
+                if d_old_min < d_new_min:
+                    agent.add_event(e.MOVED_AWAY_FROM_ENEMY)
+                if d_old_min > d_new_min:
+                    agent.add_event(e.MOVED_CLOSER_TO_ENEMY)
             
 
 
