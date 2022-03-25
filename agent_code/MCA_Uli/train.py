@@ -107,12 +107,12 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     start = datetime.now()
 
-    #print("Last game feat", state_to_features(last_game_state,events), events)
+    print("Last game feat", state_to_features(last_game_state,events), events)
 
     G = 0
     for i, step in enumerate(self.Transitions[:-1][::-1]):
         G = self.gamma*G + step[3]
-        #print(G,step[3],events)
+        #print(i,type(step[2]),events)
         if tuple(step[2]) not in [tuple(x[2]) for x in self.Transitions[:-1][::-1][len(self.Transitions) - i - 1:]]:
             self.returns[tuple(step[2])].append(G)
             self.V[tuple(step[2])] = np.average(self.returns[tuple(step[2])])
@@ -143,7 +143,7 @@ def reward_from_events(self, events: List[str]) -> int:
         # slightly discourage waiting
         #e.WAITED: -0.1,
         #e.BOMB_DROPPED: -3,
-        e.KILLED_OPPONENT: 10,
+        #e.KILLED_OPPONENT: 10,
         #e.SURVIVED_ROUND: 1,
         #e.OPPONENT_ELIMINATED: 5,
         e.KILLED_SELF: -20,

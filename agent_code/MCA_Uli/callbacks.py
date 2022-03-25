@@ -219,6 +219,7 @@ def state_to_features(game_state: dict, events = None) -> np.array:
     #    closest_enemy_pos = 
     if events:
         if e.COIN_COLLECTED in events:
+            #print("Coin collected")
             features[0] = 0
 
         #print(features, game_state["bombs"], agent_pos)
@@ -229,7 +230,7 @@ def state_to_features(game_state: dict, events = None) -> np.array:
 
         
 
-    #print(features)
+    #print("returning feat.",features)
     return features.astype(int)
 
 
