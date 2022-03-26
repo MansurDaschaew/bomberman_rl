@@ -1,4 +1,4 @@
- from _typeshed import IdentityFunction
+from _typeshed import IdentityFunction
 import os
 import pickle
 import random
@@ -99,14 +99,35 @@ def state_to_features(game_state: dict) -> np.array:
     if game_state is None:
         return None
 
+    pos = game_state["self"][3]
+    field = game_state["field"]
+    coins = game_state["coins"]
+    bombs = game_state["bombs"]
+
+    #GET INFO OF PLAYING FIELD
+    # get the feature funcs from from features.py 
+    
+    #free tiles
+    # free_tiles = get_free_tiles(field)
+    
+    
+    #crate features
+    #crate_features = get...
+    
+    #coin features
+
+    #escape bomb and deadly koordinates
+    
     # For example, you could construct several channels of equal shape, ...
+    features = 0 #np.append(crate_features, is_next_to_crate, etc...)
+
     channels = []
     channels.append(...)
     # concatenate them as a feature tensor (they must have the same shape), ...
     stacked_channels = np.stack(channels)
     # and return them as a vector
-    return stacked_channels.reshape(-1)
-
+    #return stacked_channels.reshape(-1)
+    return features
 
 print(eps_greedy([1,2,3], 0.05))
 
@@ -128,6 +149,66 @@ if __name__ == '__main__':
     for s in states: 
         for a in range(e):
             Q[(s,a)] = 0.0
+    
+    n = 16 #steps looking back (n step Sarsa)
+    state_memory = np.zeros((n,4)) #states must be updated 
+    action_memory = np.zeros(n)
+    reward_memory = np.zeros(n)
+    reward_memory = np.zeros(n)
+
+    scores = []
+    n_episodes = 400 #how many steps are beeing played
+    for i in range(n_episodes): 
+        done = False 
+        score = 0.0
+        t = 0 
+        T = np.inf
+        observation = choose_action(Q, observation, eps)
+        action_memory[t%n] = action
+        state_memory[t%n] = observation
+
+        while not done:
+            observation, reward, done, info = env.step(action)
+            score += reward
+            state_memory[(t+1)%n] = observation 
+            reward_memory[(t+1)%n] = reward 
+            if done: 
+                T = t + 1
+        
+        action = choose_action(Q,observation,eps)
+        action_memory[(t+1)%n] = action 
+        tau = t - n - 1
+        if tau >= 0:
+            G = [gamma**(j-tau-1)*reward_memory[j%n] \
+                for j in range(tau+1, min(tau+n,T)+1)]
+            G = np.sum(G)
+            if tau + n < T:
+                s = get_state(state_memory[(tau+n%n)])
+                a = int(action_memory[(tau+n)%n])
+                G += gamma**n * Q([s,a])
+            s = get_state(state_memory[tau%n])
+            a = action_memory[tau%n]
+            Q[(s,a)] += alpha * (G-Q[(s,a)])
+
+    for tau in range(t-n+1,T):
+        G = [gamma**(j-tau-1)*reward_memory[j%n]\
+                for j in range(tau+1,min(tau+n, T)+1)]
+        G = np.sum(G)
+        if tau + n < T: 
+            s = get_state(state_memory[(tau+n%n)])
+            a = int(action_memory[(tau+n)%n])
+            G += gamma**n * Q([s,a])
+        
+        s = get_state(state_memory[tau%n])
+        a = action_memory[tau%n]
+        Q[(s,a)] += alpha * (G-Q[(s,a)])
+
+    scores.append(score)
+    avg_score = np.mean(score[-1000:])
+    epsilon = epsilon - 2 / n_episodes if epsilon > 0 else 0
+    if i % 1000 == 0: 
+        print(’episode ’, i, ’avg_score %.1f’ % avg_score, ’epsilon %.2f’ % epsilon)
+
     
     n = 16 #steps looking back (n step Sarsa)
     state_memory = np.zeros((n,4)) #states must be updated 
