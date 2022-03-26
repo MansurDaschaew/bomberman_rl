@@ -69,7 +69,7 @@ def get_current_round(get_state_for_agent):
 
 
 # position of opponent(s) + boolean if they can or cannot place a new bomb in the next step
-def get_opponents_position:
+def get_opponents_position():
     
 
 # count of current points (maybe devide into two features: count of collected coins & count of destroyed opponents)
