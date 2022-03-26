@@ -60,10 +60,17 @@ def get_nearest_bomb_tile(field, pos):
     #for i in range(len())
 
 # number of opponents alive (-> monitor danger of others)
+def get_opponents_number(get_state_for_agent):
+    return len(get_state_for_agent[others])
 
-# number of steps(-> monitor game time correlated actions)
+# number of rounds (-> monitor game time correlated actions)
+def get_current_round(get_state_for_agent):
+    return get_state_for_agent[round]
+
 
 # position of opponent(s) + boolean if they can or cannot place a new bomb in the next step
+def get_opponents_position:
+    
 
 # count of current points (maybe devide into two features: count of collected coins & count of destroyed opponents)
 
