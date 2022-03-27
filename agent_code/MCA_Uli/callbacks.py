@@ -179,7 +179,7 @@ def state_to_features(game_state: dict, events = None) -> np.array:
     :return: np.array
     """
 
-    # features: [distance to closest coin, in bomb range, timeout of closest bomb, distance to closest bomb]
+    # features: [distance to closest coin, in bomb range, timeout of closest bomb, distance to closest bomb, distance to enemy, distance to crate]
     features = np.zeros([6])
     # This is the dict before the game begins and after it ends
     if game_state is None:
