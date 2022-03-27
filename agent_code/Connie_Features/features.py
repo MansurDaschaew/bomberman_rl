@@ -55,8 +55,6 @@ def features(game_state):
     features[2] = game_state["field"][agent_pos[0], agent_pos[1] - 1] + 1
     features[3] = game_state["field"][agent_pos[0], agent_pos[1] + 1] + 1
     
-    
-    
     # nearest coins
     ## find closest coin
     closest_coin_pos = game_state["coins"][np.argmin(((game_state["coins"]-np.array(agent_pos))**2).sum(axis=1))]
@@ -64,13 +62,17 @@ def features(game_state):
     ## check if closest coin is in x or y direction
     x_or_y = np.argmax(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
     
+    
+    
+    
     # number of opponents alive (-> monitor danger of others)
     numb_opponents_alive = len(game_state['others'])
     
     # number of rounds (-> monitor game time correlated actions)
     numb_rounds = game_state['round']
     
-    
+    # count of overall points gained
+    ovarall_points = game_State['self'][1]
     
     
 #? distance to bombs/next bomb
@@ -124,12 +126,10 @@ def get_nearest_bomb_tile(field, pos):
 
 
 # position of opponent(s) + boolean if they can or cannot place a new bomb in the next step
-def get_opponents_position():
     
 
 # count of current points (maybe devide into two features: count of collected coins & count of destroyed opponents)
 
-# count of overall points gained
 
 # shortest path to nearest object
 ##see Mansurs features
