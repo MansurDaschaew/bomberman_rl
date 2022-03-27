@@ -64,6 +64,11 @@ def features(game_state):
     ## check if closest coin is in x or y direction
     x_or_y = np.argmax(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
     
+    # number of opponents alive (-> monitor danger of others)
+    numb_opponents_alive = len(game_state['others'])
+    
+    # number of rounds (-> monitor game time correlated actions)
+    numb_rounds = game_state['round']
     
     
     
@@ -115,12 +120,7 @@ def get_nearest_bomb_tile(field, pos):
     #see which pos is nearest  ...
     #for i in range(len())
 
-# number of opponents alive (-> monitor danger of others)
 
-numb_opponents_alive = len(game_state['others'])
-
-# number of rounds (-> monitor game time correlated actions)
-numb_rounds = game_state['round']
 
 
 # position of opponent(s) + boolean if they can or cannot place a new bomb in the next step
