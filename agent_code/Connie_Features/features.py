@@ -57,7 +57,12 @@ def features(game_state):
     
     
     
+    # nearest coins
+    ## find closest coin
+    closest_coin_pos = game_state["coins"][np.argmin(((game_state["coins"]-np.array(agent_pos))**2).sum(axis=1))]
     
+    ## check if closest coin is in x or y direction
+    x_or_y = np.argmax(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
     
     
     
@@ -130,5 +135,4 @@ def get_opponents_position():
 # shortest path to nearest object
 ##see Mansurs features
 
-# nearest coins
-##see Mansurs & Ulis features for code
+
