@@ -1,17 +1,30 @@
 
 
+def features(game_state):
+    #boolean "can I place a bomb in the next step" -> monitor bombability
+    
+    # dangerous tiles in the next step (+ two steps later +three + four steps later)(with a radius)(-> monitor where not to go
+    
+    dangerous_coordinates_next = np.nonzero(game_state['explosion_map'] == 1)
+    dangerous_coordinates_next.append(np.where(game_state['bombs'][1] == 0))
+    
+    
+    dangerous_coordinates_in_two = np.nonzero(game_state['explosion_map'] == 2)
+    dangerous_coordinates_in_two.append(np.where(game_state['bombs'][1] == 1))
+    
+    dangerous_coordinates_in_three = np.where(game_state['bombs'][1] == 2)
+    
+    dangerous_coordinates_in_four = np.where(game_state['bombs'][1] == 3)
+    
+    # safe tiles in the next step (with radius)
+    #safe_coordinates_next = np.where(game_state['explosion_map'] == 0)
+    # PLUS: everywhere where there s no bomb planted AND everywhere where bomb is not gount to explode in next step
 
-
-# boolean "can I place a bomb in the next step" -> monitor bombability
-
-# dangerous tiles in the next step (+ two steps later +three + four steps later)(with a radius)(-> monitor where not to go)
-
-#?same as above? safe tiles in the next step (with radius)
-##see Mansurs features for code
 
 # navigatable tiles positions (with a radius to minimize computationals effort) (-> know, where able to go)
 ##see Mansurs & Ulis features for code
-
+def get_navigatable_tiles(game_state):
+    game_state['']
 #? distance to bombs/next bomb
 
 # position of bombable crates (as well with a radius to minimize computational effort)
