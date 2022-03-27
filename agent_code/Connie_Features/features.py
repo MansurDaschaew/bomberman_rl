@@ -75,6 +75,15 @@ def features(game_state):
     ovarall_points = game_State['self'][1]
     
     
+    
+    
+    return features.astype(int)
+    
+    
+    
+    
+    
+    
 #? distance to bombs/next bomb
 
 # position of bombable crates (as well with a radius to minimize computational effort)
