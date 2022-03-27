@@ -41,7 +41,7 @@ def setup_training(self):
     self.Transitions = []
 
     #self.V = np.zeros([2,2,2,2,2,2,2,2])
-    self.V = {tuple([i,j,k,l,m,n]):float() for i in range(-1, 30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15), for n in range(-1,6)}
+    self.V = {tuple([i,j,k,l,m,n]):float() for i in range(-1, 30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6)}
     self.returns = {tuple([i,j,k,l,m,n]):list() for i in range(-1,30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6)}
 
     if os.path.isfile("my-saved-model.pt"):

@@ -237,7 +237,7 @@ def state_to_features(game_state: dict, events = None) -> np.array:
             if game_state["field"][i,j] == 1:
                 crates += [[i,j]]
 
-    if len(crates) == 0:
+    #if len(crates) == 0:
 
     
     #crates = [[i, j] for i in range(1,16) for j in range(1,16) if game_state["field"][i,j] == 1]
@@ -254,6 +254,20 @@ def state_to_features(game_state: dict, events = None) -> np.array:
 
         #bomb_map = np.array([np.array(game_state["bombs"][:][0]), game_state["bombs"][:][1]])
         #print(bomb_map)
+
+    dangerous_coordinates_next = np.nonzero(game_state['explosion_map'] == 1)
+    dangerous_coordinates_next.append(np.where(game_state['bombs'][1] == 0))
+
+    dangerous_coordinates_in_two = np.nonzero(game_state['explosion_map'] == 2)
+    dangerous_coordinates_in_two.append(np.where(game_state['bombs'][1] == 1))
+    dangerous_coordinates_in_three = np.where(game_state['bombs'][1] == 2)
+    dangerous_coordinates_in_four = np.where(game_state['bombs'][1] == 3)
+
+    numb_opponents_alive = len(game_state['others'])
+    numb_rounds = game_state['round']
+    ovarall_points = game_State['self'][1]
+
+    #features[5] = dangerous_coordinates_next
 
         
 
