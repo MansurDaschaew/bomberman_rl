@@ -1,6 +1,13 @@
 
 
 def features(game_state):
+    features = np.zeros([9])
+    
+    # This is the dict before the game begins and after it ends
+    if game_state is None:
+        return None
+    
+    
     #boolean "can I place a bomb in the next step" -> monitor bombability
     bomb_action_possible = []
     (_,_,a,_) = game_state['self']
@@ -9,7 +16,7 @@ def features(game_state):
     for i in range(game_state['round']):
         #if false occurs 8 times in a row -> returne TRUE
     
-    # dangerous tiles in the next step (+ two steps later +three + four steps later)(with a radius)(-> monitor where not to go
+    # dangerous tiles in the next step (+ two steps later +three + four steps later)(-> monitor where not to go)
     
     dangerous_coordinates_next = np.nonzero(game_state['explosion_map'] == 1)
     dangerous_coordinates_next.append(np.where(game_state['bombs'][1] == 0))
@@ -22,15 +29,30 @@ def features(game_state):
     
     dangerous_coordinates_in_four = np.where(game_state['bombs'][1] == 3)
     
+    ### WITH RADIUS?
+    
     # safe tiles in the next step (with radius)
-    #safe_coordinates_next = np.where(game_state['explosion_map'] == 0)
-    # PLUS: everywhere where there s no bomb planted AND everywhere where bomb is not going to explode in next step
+    ###safe_coordinates_next = np.where(game_state['explosion_map'] == 0)
+    ###PLUS: everywhere where there s no bomb planted AND everywhere where bomb is not going to explode in next step
+    
+    # navigatable tiles positions (with a radius to minimize computationals effort) (-> know, where able to go)
+    ## Find walkable directions -> left right up down
+    agent_pos = game_state["self"][3]
 
+    if agent_pos == (15,16) or agent_pos == (16,15):
+        agent_pos = (15,15)
 
-# navigatable tiles positions (with a radius to minimize computationals effort) (-> know, where able to go)
-##see Mansurs & Ulis features for code
-
-    game_state['']
+    ## As Wall is marked as -1 and Path 1, respectively, we cann add one (for now)
+    ## To find out if we can walk in a direction or not
+    ##if game_state["step"] == 1 or game_state["step"] == 2:
+        ##print(agent_pos, game_state["field"][agent_pos])
+    features[0] = game_state["field"][agent_pos[0]-1, agent_pos[1]] + 1
+    features[1] = game_state["field"][agent_pos[0]+1, agent_pos[1]] + 1
+    features[2] = game_state["field"][agent_pos[0], agent_pos[1] - 1] + 1
+    features[3] = game_state["field"][agent_pos[0], agent_pos[1] + 1] + 1
+    
+    
+    
 #? distance to bombs/next bomb
 
 # position of bombable crates (as well with a radius to minimize computational effort)
