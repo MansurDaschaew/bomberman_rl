@@ -1,4 +1,6 @@
 from collections import namedtuple, deque
+from numba import jit
+
 
 import pickle
 from typing import List
@@ -10,6 +12,7 @@ from .callbacks import state_to_features
 import numpy as np
 from datetime import datetime
 import os
+import sys
 
 # This is only an example!
 #Transition = namedtuple('Transition',
@@ -37,9 +40,9 @@ def setup_training(self):
     self.gamma = 0.6
     self.Transitions = []
 
-    self.V = np.zeros([2,2,2,2,2,2,2,2])
-    self.V = {tuple([i,j,k,l,m]):float() for i in range(-1, 30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,10)}
-    self.returns = {tuple([i,j,k,l,m]):list() for i in range(-1,30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,10)}
+    #self.V = np.zeros([2,2,2,2,2,2,2,2])
+    self.V = {tuple([i,j,k,l,m,n]):float() for i in range(-1, 30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15), for n in range(-1,6)}
+    self.returns = {tuple([i,j,k,l,m,n]):list() for i in range(-1,30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6)}
 
     if os.path.isfile("my-saved-model.pt"):
         print("model found")
@@ -101,20 +104,23 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     :param self: The same object that is passed to all of your callbacks.
     """
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
-    self.Transitions += [[state_to_features(last_game_state, events), last_action, None, reward_from_events(self, events)]]
+    self.Transitions += [[state_to_features(last_game_state, events), last_action, state_to_features(last_game_state), reward_from_events(self, events)]]
+    #self.Transitions += [[state_to_features(last_game_state, events), last_action, None, reward_from_events(self, events)]]
 
     start = datetime.now()
 
     #self.logger.debug("Last game feat", state_to_features(last_game_state,events), events, reward_from_events(self,events))
     #self.logger.debug("Last action",last_action)
 
+    idx = 2
+
     G = 0
     for i, step in enumerate(self.Transitions[::-1]):
         G = self.gamma*G + step[3]
-        if tuple(step[0]) not in [tuple(x[2]) for x in self.Transitions[::-1][len(self.Transitions) - i:]]:
-            self.returns[tuple(step[0])].append(G)
-            self.logger.debug("SETTING STATE: " + str(step[0]) + " TO Value: " + str(np.average(self.returns[tuple(step[0])])))
-            self.V[tuple(step[0])] = np.average(self.returns[tuple(step[0])])
+        if tuple(step[idx]) not in [tuple(x[idx]) for x in self.Transitions[::-1][len(self.Transitions) - i:]]:
+            self.returns[tuple(step[idx])].append(G)
+            self.logger.debug("SETTING STATE: " + str(step[idx]) + " TO Value: " + str(np.average(self.returns[tuple(step[idx])])))
+            self.V[tuple(step[idx])] = np.average(self.returns[tuple(step[idx])])
 
         #print(self.V[tuple(idx[0].astype(int))])               
         pass
@@ -122,8 +128,18 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     # Store the model
     saving_start = datetime.now()
-    with open("my-saved-model.pt", "wb") as file:
-        pickle.dump((self.V, self.returns), file)
+    # gracefully interrupt
+
+    try:
+        if last_game_state["round"] % 100 == 0:
+            with open("my-saved-model.pt", "wb") as file:
+                pickle.dump((self.V, self.returns), file)
+    except KeyboardInterrupt:
+        print("Caught Keyboard Interrupt during saving... Saving once more gracefully and then quitting")
+        with open("my-saved-model.pt", "wb") as file:
+            pickle.dump((self.V, self.returns), file)
+        sys.exit()
+
     #print(datetime.now()-start, datetime.now() - saving_start)
     self.Transitions = []
 
@@ -137,23 +153,23 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED: 5,
+        #e.COIN_COLLECTED: 2,
         #e.INVALID_ACTION: -1,
         # slightly discourage waiting
         #e.WAITED: -0.1,
-        #e.BOMB_DROPPED: -3,
-        e.KILLED_OPPONENT: 30,
+        #e.BOMB_DROPPED: 1,
+        e.KILLED_OPPONENT: 100,
         #e.SURVIVED_ROUND: 1,
-        #e.OPPONENT_ELIMINATED: 5,
+        e.OPPONENT_ELIMINATED: 5,
         e.KILLED_SELF: -10,
-        #e.GOT_KILLED: -1,
-        e.MOVED_IN_BOMB_RANGE: -5,
+        e.GOT_KILLED: -10,
+        e.MOVED_IN_BOMB_RANGE: -10,
         e.MOVED_OUT_BOMB_RANGE: 20,
 
-        e.STAYED_OUT_BOMB_RANGE: 5,
+        e.STAYED_OUT_BOMB_RANGE:20,
         e.MOVED_CLOSER_TO_ENEMY: 10,
-        e.MOVED_AWAY_FROM_ENEMY: -1,
-        #e.STAYED_IN_BOMB_RANGE: -0.25,
+        e.MOVED_AWAY_FROM_ENEMY: -5,
+        e.STAYED_IN_BOMB_RANGE: -3,
     }
     reward_sum = 0
     for event in events:

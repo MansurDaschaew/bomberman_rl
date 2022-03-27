@@ -6,7 +6,9 @@ import settings as s
 import events as e
 
 import numpy as np
+import datetime as dt
 
+from numba import jit
 import copy
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
@@ -56,7 +58,8 @@ def setup(self):
                 
         
 
-
+@jit
+#(target ="cuda") 
 def act(self, game_state: dict) -> str:
     """
     Your agent should parse the input, think, and take a decision.
@@ -74,7 +77,7 @@ def act(self, game_state: dict) -> str:
     if self.train and random.random() < random_prob:
         self.logger.debug("Choosing action purely at random.")
         # 80%: walk in any direction. 10% wait. 10% bomb.
-        return np.random.choice(ACTIONS, p=[.2, .2, .2, .2, .2, .0])
+        return np.random.choice(ACTIONS, p=[.1, .1, .1, .1, .1, .5])
 
     #print(game_state["bombs"])
     
@@ -148,7 +151,7 @@ def act(self, game_state: dict) -> str:
     
     options = softmax(options)
 
-    # Comment or uncomment do disale option to drop bombs
+    # Comment or uncomment do (dis-)enable option to drop bombs
     #options[5] = 0
     #options = options/np.sum(options)
 
@@ -159,7 +162,8 @@ def act(self, game_state: dict) -> str:
     self.logger.debug("ACTION: " + str(action))
     return action
 
-
+@jit
+#(target ="cuda") 
 def state_to_features(game_state: dict, events = None) -> np.array:
     """
     *This is not a required function, but an idea to structure your code.*
@@ -176,7 +180,7 @@ def state_to_features(game_state: dict, events = None) -> np.array:
     """
 
     # features: [distance to closest coin, in bomb range, timeout of closest bomb, distance to closest bomb]
-    features = np.zeros([5])
+    features = np.zeros([6])
     # This is the dict before the game begins and after it ends
     if game_state is None:
         return None
@@ -223,27 +227,23 @@ def state_to_features(game_state: dict, events = None) -> np.array:
         others_fields = np.array([[x[3][0], x[3][1]] for x in game_state["others"]])
         d = others_fields - np.array(agent_pos)
         min_dist = np.sum(np.abs(d[np.argmin(np.sum(d**2,axis=1))]))
-        features[4] = np.min([9, min_dist])
+        features[4] = np.min([14, min_dist])
+        features[4] = min_dist
+    
+    #crates
+    crates = []
+    for i in range(1,16):
+        for j in range(1,16):
+            if game_state["field"][i,j] == 1:
+                crates += [[i,j]]
+
+    if len(crates) == 0:
+
+    
+    #crates = [[i, j] for i in range(1,16) for j in range(1,16) if game_state["field"][i,j] == 1]
+    print(crates)
 
 
-        #print(others_fields, agent_pos, d, min_dist)
-
-        """
-        bomb_fields = np.array([(x[0] + i, x[1]) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
-                + [(x[0], x[1] + i) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER, s.BOMB_POWER + 1)])
-        #print(bomb_map,bomb_fields, agent_pos in bomb_fields)
-        #print(timers)
-        d = np.array([[x[0],x[1]] for x in np.array(game_state["bombs"])[:,0]]) - np.array(agent_pos)
-        #print(d,d[np.argmin(np.sum(d**2,axis=1))])
-        #print(np.min(s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))))
-        features[3] = np.min([s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))])
-        #print(agent_pos,bomb_map, bomb_fields, agent_pos in bomb_fields)
-        features[1] = int(agent_pos in bomb_fields)
-        #print(timers, np.argmin(np.sum(d**2,axis=1)))
-        features[2] =  timers[np.argmin(np.sum(d**2,axis=1))]"""
-
-    #if not game_state["others"]:
-    #    closest_enemy_pos = 
     if events:
         if e.COIN_COLLECTED in events:
             #print("Coin collected")
@@ -259,6 +259,3 @@ def state_to_features(game_state: dict, events = None) -> np.array:
 
     #print("returning feat.",features)
     return features.astype(int)
-
-
-

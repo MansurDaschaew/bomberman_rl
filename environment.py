@@ -17,6 +17,8 @@ from agents import Agent, SequentialAgentBackend
 from fallbacks import pygame
 from items import Coin, Explosion, Bomb
 
+from numba import jit
+
 WorldArgs = namedtuple("WorldArgs",
                        ["no_gui", "fps", "turn_based", "update_interval", "save_replay", "replay", "make_video", "continue_without_training", "log_dir", "save_stats", "match_name", "seed", "silence_errors", "scenario"])
 
@@ -124,7 +126,8 @@ class GenericWorld:
             for obstacle in self.bombs + self.active_agents:
                 is_free = is_free and (obstacle.x != x or obstacle.y != y)
         return is_free
-
+    @jit
+    #(target="cuda")
     def perform_agent_action(self, agent: Agent, action: str):
 
         # Custom events
@@ -154,13 +157,13 @@ class GenericWorld:
             agent.add_event(e.INVALID_ACTION)
         
         # Check if agent got either in Bomb range or got closer to enemy
-        if action != "WAIT" and agent.name == "MCA_Uli":
+        if action != "BOMB" and agent.name == "MCA_Uli":
 
             # check if agent moved into bomb ranger and fire events
             new_agent_pos = (agent.x, agent.y)
-            bomb_map = np.array([(bomb.x, bomb.y) for bomb in self.bombs])
-            bomb_map = np.array([(bomb[0] + i, bomb[1]) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
-                    + [(bomb[0], bomb[1] + i) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)])
+            bomb_map = [(bomb.x, bomb.y) for bomb in self.bombs]
+            bomb_map = [(bomb[0] + i, bomb[1]) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
+                    + [(bomb[0], bomb[1] + i) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)]
             #print(agent_pos, new_agent_pos, [(x.x, x.y) for x in self.bombs], agent_pos in bomb_map,bomb_map)
             if agent_pos in bomb_map and not new_agent_pos in bomb_map:
                 agent.add_event(e.MOVED_OUT_BOMB_RANGE)
@@ -170,6 +173,7 @@ class GenericWorld:
                 agent.add_event(e.STAYED_IN_BOMB_RANGE)
             elif len(bomb_map) != 0:
                 agent.add_event(e.STAYED_OUT_BOMB_RANGE)
+            #print(agent_pos, new_agent_pos,agent_pos in bomb_map, new_agent_pos in bomb_map,agent.events, bomb_map)
 
             # check if agent got closer to enemy
             others =  [other.get_state() for other in self.active_agents if other is not agent]
