@@ -35,6 +35,10 @@ def features(game_state):
     ###safe_coordinates_next = np.where(game_state['explosion_map'] == 0)
     ###PLUS: everywhere where there s no bomb planted AND everywhere where bomb is not going to explode in next step
     
+    
+    
+    
+    
     # navigatable tiles positions (with a radius to minimize computationals effort) (-> know, where able to go)
     ## Find walkable directions -> left right up down
     agent_pos = game_state["self"][3]
@@ -50,6 +54,12 @@ def features(game_state):
     features[1] = game_state["field"][agent_pos[0]+1, agent_pos[1]] + 1
     features[2] = game_state["field"][agent_pos[0], agent_pos[1] - 1] + 1
     features[3] = game_state["field"][agent_pos[0], agent_pos[1] + 1] + 1
+    
+    
+    
+    
+    
+    
     
     
     
