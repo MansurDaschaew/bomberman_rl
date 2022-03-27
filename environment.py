@@ -156,11 +156,12 @@ class GenericWorld:
         else:
             agent.add_event(e.INVALID_ACTION)
         
+        new_agent_pos = (agent.x, agent.y)
+        
         # Check if agent got either in Bomb range or got closer to enemy
         if action != "BOMB" and agent.name == "MCA_Uli":
 
             # check if agent moved into bomb ranger and fire events
-            new_agent_pos = (agent.x, agent.y)
             bomb_map = [(bomb.x, bomb.y) for bomb in self.bombs]
             bomb_map = [(bomb[0] + i, bomb[1]) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
                     + [(bomb[0], bomb[1] + i) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)]
@@ -190,7 +191,16 @@ class GenericWorld:
                     agent.add_event(e.MOVED_AWAY_FROM_ENEMY)
                 if d_old_min > d_new_min:
                     agent.add_event(e.MOVED_CLOSER_TO_ENEMY)
-            
+        
+
+        exp = [[x,y] for exp in self.explosions for (x,y) in exp.blast_coords if exp.is_dangerous()]
+        if not list(agent_pos) in exp and list(new_agent_pos) in exp:
+            agent.add_event(e.MOVED_INTO_EXPLOSION)
+
+        #exp_pos = [[x,y] for exp2 in exp for (x,y) in exp2.blast_coords if exp2.is_dangerous()]
+        #"""print(list(agent_pos) in exp_pos, list(new_agent_pos) in exp_pos, exp_pos)
+        #   """
+        #print(exp3)
 
 
     def poll_and_run_agents(self):

@@ -20,10 +20,6 @@ def softmax(arr: np.ndarray) -> np.ndarray:
     return np.exp(sm_arr)/denom
 
 
-
-
-
-
 def setup(self):
     """
     Setup your code. This is called once when loading each agent.
@@ -38,14 +34,16 @@ def setup(self):
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
-    if self.train or not os.path.isfile("my-saved-model.pt"):
+    if self.train or not os.path.isfile("MCA-V.pt"):
         self.logger.info("Setting up model from scratch.")
         weights = np.random.rand(len(ACTIONS))
         self.model = weights / weights.sum()
     else:
         self.logger.info("Loading model from saved state.")
-        with open("my-saved-model.pt", "rb") as file:
-            (self.V, self.returns) = pickle.load(file)
+        with open("MCA-V.pt", "rb") as file:
+            self.V = pickle.load(file)
+        with open("MCA-returns.pt", "rb") as file:
+            self.returns = pickle.load(file)
 
         nz  = 0
         #self.logger.debug(str(self.V))
@@ -70,16 +68,13 @@ def act(self, game_state: dict) -> str:
     :return: The action to take as a string.
     """
     # todo Exploration vs exploitation
-    random_prob = .3
-    #print(options, np.argmax(options))
+    random_prob = .2
 
-    #print(self.V[tuple(state_to_features(game_state))])
     if self.train and random.random() < random_prob:
         self.logger.debug("Choosing action purely at random.")
         # 80%: walk in any direction. 10% wait. 10% bomb.
-        return np.random.choice(ACTIONS, p=[.1, .1, .1, .1, .1, .5])
+        return np.random.choice(ACTIONS, p=[.15, .15, .15, .15, .2, .2])
 
-    #print(game_state["bombs"])
     
 
     options = []
@@ -88,10 +83,8 @@ def act(self, game_state: dict) -> str:
 
     agent_pos = np.array(game_state["self"][3])
     self.logger.debug("AGENT_POS: " + str(agent_pos) + " STATE: " + str(features) + " VALUE: " +  str(self.V[tuple(features)]))
-    #print("V", self.V)
-    #print("pos:",agent_pos,game_state["field"][tuple(agent_pos)])
     for action in ACTIONS:
-        if action == "UP":#and game_state["field"][game_state["self"][3][0], game_state["self"][3][1] -1] != -1:
+        if action == "UP":
             new_state = copy.deepcopy(game_state)
             if game_state["field"][tuple(agent_pos + [0,-1])] != 0:
                 options += [-np.Inf]
@@ -179,15 +172,13 @@ def state_to_features(game_state: dict, events = None) -> np.array:
     :return: np.array
     """
 
-    # features: [distance to closest coin, in bomb range, timeout of closest bomb, distance to closest bomb, distance to enemy, distance to crate]
-    features = np.zeros([6])
+    # features: [distance to closest coin, in bomb range, timeout of closest bomb, distance to closest bomb, distance to enemy, distance to crate, in explosion]
+    features = np.zeros([7])
     # This is the dict before the game begins and after it ends
     if game_state is None:
-        return None
+        return None    
 
-    
-
-    # Find walkable directions -> left right up down
+    # Get position of agend
     agent_pos = game_state["self"][3]
 
 
@@ -196,39 +187,29 @@ def state_to_features(game_state: dict, events = None) -> np.array:
         features[0] = -1
     else:
         closest_coin_pos = game_state["coins"][np.argmin(((game_state["coins"]-np.array(agent_pos))**2).sum(axis=1))]
-        features[0] = np.sum(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))
+        features[0] = np.min([10, np.sum(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))])
 
     #find closest bomb
     if not game_state["bombs"] or len(game_state["bombs"]) == 0:
         features[1] = 0
         features[2] = -1
     else:        
-        #print(game_state["bombs"])
-        #print(np.array(game_state["bombs"])[:,1])
         bomb_map, timers = (np.array(game_state["bombs"])[:,0], np.array(game_state["bombs"])[:,1])
         bomb_fields = np.array([(x[0] + i, x[1]) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
                 + [(x[0], x[1] + i) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER, s.BOMB_POWER + 1)])
-        #print(bomb_map,bomb_fields, agent_pos in bomb_fields)
-        #print(timers)
         d = np.array([[x[0],x[1]] for x in np.array(game_state["bombs"])[:,0]]) - np.array(agent_pos)
-        #print(d,d[np.argmin(np.sum(d**2,axis=1))])
-        #print(np.min(s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))))
         features[3] = np.min([s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))])
-        #print(agent_pos,bomb_map, bomb_fields, agent_pos in bomb_fields)
         features[1] = int(agent_pos in bomb_fields)
-        #print(timers, np.argmin(np.sum(d**2,axis=1)))
         features[2] =  timers[np.argmin(np.sum(d**2,axis=1))]
     
     # Enemy distance
     if not game_state["others"] or len(game_state["others"]) == 0:
         features[4] = -1
     else:        
-        #others_fields = np.array(game_state["others"])[:,3]
         others_fields = np.array([[x[3][0], x[3][1]] for x in game_state["others"]])
         d = others_fields - np.array(agent_pos)
         min_dist = np.sum(np.abs(d[np.argmin(np.sum(d**2,axis=1))]))
         features[4] = np.min([14, min_dist])
-        features[4] = min_dist
     
     #crates
     crates = []
@@ -237,39 +218,25 @@ def state_to_features(game_state: dict, events = None) -> np.array:
             if game_state["field"][i,j] == 1:
                 crates += [[i,j]]
 
-    #if len(crates) == 0:
+    if len(crates) != 0:
+        d = np.array(crates) - np.array(agent_pos)
+        min_dist = np.sum(np.abs(d[np.argmin(np.sum(d**2,axis=1))]))
+        #print("min dist:", min_dist)
+        features[5] = np.min([5, min_dist])
+    else:
+        features[5] = 0
 
-    
-    #crates = [[i, j] for i in range(1,16) for j in range(1,16) if game_state["field"][i,j] == 1]
-    print(crates)
+    explosions = []
+    for i in range(1,16):
+        for j in range(1,16):
+            if game_state["explosion_map"][i,j] != 0:
+                explosions += [[i,j]]
 
+    if list(agent_pos) in explosions:
+        features[6] = 1
 
     if events:
         if e.COIN_COLLECTED in events:
-            #print("Coin collected")
             features[0] = 0
 
-        #print(features, game_state["bombs"], agent_pos)
-
-
-        #bomb_map = np.array([np.array(game_state["bombs"][:][0]), game_state["bombs"][:][1]])
-        #print(bomb_map)
-
-    dangerous_coordinates_next = np.nonzero(game_state['explosion_map'] == 1)
-    dangerous_coordinates_next.append(np.where(game_state['bombs'][1] == 0))
-
-    dangerous_coordinates_in_two = np.nonzero(game_state['explosion_map'] == 2)
-    dangerous_coordinates_in_two.append(np.where(game_state['bombs'][1] == 1))
-    dangerous_coordinates_in_three = np.where(game_state['bombs'][1] == 2)
-    dangerous_coordinates_in_four = np.where(game_state['bombs'][1] == 3)
-
-    numb_opponents_alive = len(game_state['others'])
-    numb_rounds = game_state['round']
-    ovarall_points = game_State['self'][1]
-
-    #features[5] = dangerous_coordinates_next
-
-        
-
-    #print("returning feat.",features)
     return features.astype(int)

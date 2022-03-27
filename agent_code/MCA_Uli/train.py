@@ -21,7 +21,7 @@ import sys
 #Transitions = [[]]
 
 
-TRANSITION_HISTORY_SIZE=300
+#TRANSITION_HISTORY_SIZE=300
 
 def setup_training(self):
     """
@@ -41,13 +41,15 @@ def setup_training(self):
     self.Transitions = []
 
     #self.V = np.zeros([2,2,2,2,2,2,2,2])
-    self.V = {tuple([i,j,k,l,m,n]):float() for i in range(-1, 30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6)}
-    self.returns = {tuple([i,j,k,l,m,n]):list() for i in range(-1,30) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6)}
+    self.V = {tuple([i,j,k,l,m,n,o]):float() for i in range(-1, 11) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2)}
+    self.returns = {tuple([i,j,k,l,m,n,o]):list() for i in range(-1,11) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2)}
 
-    if os.path.isfile("my-saved-model.pt"):
+    if os.path.isfile("MCA-V.pt"):
         print("model found")
-        with open("my-saved-model.pt", "rb") as file:
-            (self.V, self.returns) = pickle.load(file)
+        with open("MCA-V.pt", "rb") as file:
+            self.V = pickle.load(file)
+        with open("MCA-returns.pt", "rb") as file:
+            self.returns = pickle.load(file)
 
         #print(len(self.V.keys()))
         nz = 0
@@ -132,12 +134,16 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     try:
         if last_game_state["round"] % 100 == 0:
-            with open("my-saved-model.pt", "wb") as file:
-                pickle.dump((self.V, self.returns), file)
+            with open("MCA-V.pt", "wb") as file:
+                pickle.dump(self.V, file)
+            with open("MCA-returns.pt", "wb") as file:
+                pickle.dump(self.returns, file)
     except KeyboardInterrupt:
         print("Caught Keyboard Interrupt during saving... Saving once more gracefully and then quitting")
-        with open("my-saved-model.pt", "wb") as file:
-            pickle.dump((self.V, self.returns), file)
+        with open("MCA-V.pt", "wb") as file:
+            pickle.dump(self.V, file)
+        with open("MCA-returns.pt", "wb") as file:
+            pickle.dump(self.returns, file)
         sys.exit()
 
     #print(datetime.now()-start, datetime.now() - saving_start)
@@ -153,23 +159,26 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
-        #e.COIN_COLLECTED: 2,
+        e.COIN_COLLECTED: 20,
+        e.CRATE_DESTROYED: 50,
+        e.COIN_FOUND: 10,
         #e.INVALID_ACTION: -1,
         # slightly discourage waiting
         #e.WAITED: -0.1,
-        #e.BOMB_DROPPED: 1,
+        e.BOMB_DROPPED: 10,
         e.KILLED_OPPONENT: 100,
         #e.SURVIVED_ROUND: 1,
         e.OPPONENT_ELIMINATED: 5,
-        e.KILLED_SELF: -10,
-        e.GOT_KILLED: -10,
-        e.MOVED_IN_BOMB_RANGE: -10,
-        e.MOVED_OUT_BOMB_RANGE: 20,
+        e.KILLED_SELF: -50,
+        e.GOT_KILLED: -30,
+        e.MOVED_INTO_EXPLOSION: -50,
+        e.MOVED_IN_BOMB_RANGE: -30,
+        e.MOVED_OUT_BOMB_RANGE: 30,
 
-        e.STAYED_OUT_BOMB_RANGE:20,
+        e.STAYED_OUT_BOMB_RANGE:25,
         e.MOVED_CLOSER_TO_ENEMY: 10,
         e.MOVED_AWAY_FROM_ENEMY: -5,
-        e.STAYED_IN_BOMB_RANGE: -3,
+        e.STAYED_IN_BOMB_RANGE: -20,
     }
     reward_sum = 0
     for event in events:
