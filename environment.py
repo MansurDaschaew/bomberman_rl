@@ -156,6 +156,8 @@ class GenericWorld:
         
         new_agent_pos = (agent.x, agent.y)
         
+        bomb_map = []
+
         # Check if agent got either in Bomb range or got closer to enemy
         if action != "BOMB" and agent.name == "MCA_Uli":
 
@@ -174,21 +176,21 @@ class GenericWorld:
                 agent.add_event(e.STAYED_OUT_BOMB_RANGE)
             #print(agent_pos, new_agent_pos,agent_pos in bomb_map, new_agent_pos in bomb_map,agent.events, bomb_map)
 
-            # check if agent got closer to enemy
-            others =  [other.get_state() for other in self.active_agents if other is not agent]
-            if len(others) != 0:
-            #print("OTHERS:", others)
-                others_fields = np.array([[x[3][0], x[3][1]] for x in others])
-                d_old = others_fields - agent_pos
-                d_new = others_fields - new_agent_pos
-                #print(np.argmin(d_old**2))
-                d_old_min = np.sum(np.abs(d_old[np.argmin(np.sum(d_old**2))]))
-                d_new_min = np.sum(np.abs(d_new[np.argmin(np.sum(d_new**2))]))
-                #print(d_old_min, d_new_min)
-                if d_old_min < d_new_min:
-                    agent.add_event(e.MOVED_AWAY_FROM_ENEMY)
-                if d_old_min > d_new_min:
-                    agent.add_event(e.MOVED_CLOSER_TO_ENEMY)
+        # check if agent got closer to enemy
+        others =  [other.get_state() for other in self.active_agents if other is not agent]
+        if len(others) != 0:
+        #print("OTHERS:", others)
+            others_fields = np.array([[x[3][0], x[3][1]] for x in others])
+            d_old = others_fields - agent_pos
+            d_new = others_fields - new_agent_pos
+            #print(np.argmin(d_old**2))
+            d_old_min = np.sum(np.abs(d_old[np.argmin(np.sum(d_old**2))]))
+            d_new_min = np.sum(np.abs(d_new[np.argmin(np.sum(d_new**2))]))
+            #print(d_old_min, d_new_min)
+            if d_old_min < d_new_min:
+                agent.add_event(e.MOVED_AWAY_FROM_ENEMY)
+            if d_old_min > d_new_min:
+                agent.add_event(e.MOVED_CLOSER_TO_ENEMY)
         
 
         exp = [[x,y] for exp in self.explosions for (x,y) in exp.blast_coords if exp.is_dangerous()]

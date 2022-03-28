@@ -172,8 +172,8 @@ def reward_from_events(self, events: List[str]) -> int:
         e.KILLED_SELF: -100,
         e.GOT_KILLED: -100,
         e.MOVED_INTO_EXPLOSION: -100,
-        e.MOVED_IN_BOMB_RANGE: -30,
-        e.MOVED_OUT_BOMB_RANGE: 30,
+        e.MOVED_IN_BOMB_RANGE: -50,
+        e.MOVED_OUT_BOMB_RANGE: 50,
 
         e.STAYED_OUT_BOMB_RANGE:25,
         e.MOVED_CLOSER_TO_ENEMY: 10,
