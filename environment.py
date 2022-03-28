@@ -17,6 +17,8 @@ from agents import Agent, SequentialAgentBackend
 from fallbacks import pygame
 from items import Coin, Explosion, Bomb
 
+from agent_code.MCA_Uli.callbacks import find_walkable_safe_spots, is_safe
+
 from numba import jit
 
 WorldArgs = namedtuple("WorldArgs",
@@ -156,15 +158,24 @@ class GenericWorld:
         
         new_agent_pos = (agent.x, agent.y)
         
-        bomb_map = []
+        bomb_map = [(bomb.x, bomb.y) for bomb in self.bombs]
+        bomb_map = [(bomb[0] + i, bomb[1]) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
+                + [(bomb[0], bomb[1] + i) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)]
+        exp = [[x,y] for exp in self.explosions for (x,y) in exp.blast_coords if exp.is_dangerous()]
+        if not list(agent_pos) in exp and list(new_agent_pos) in exp:
+            agent.add_event(e.MOVED_INTO_EXPLOSION)
 
+        tested = []
+        safe_spots = []
+        paths = {}
+        find_walkable_safe_spots(list(new_agent_pos), tested, safe_spots, bomb_map, exp, np.array(self.arena), paths)
+        if action == "BOMB" and len(safe_spots) == 0 and np.min([len(paths[key]) - 1 for key in paths.keys()]) < s.BOMB_TIMER - 1:
+            agent.add_event(e.PLACED_BOMB_WITHOUT_SAFE_SPOT)
+        #print(np.array(self.arena))
         # Check if agent got either in Bomb range or got closer to enemy
         if action != "BOMB" and agent.name == "MCA_Uli":
 
             # check if agent moved into bomb ranger and fire events
-            bomb_map = [(bomb.x, bomb.y) for bomb in self.bombs]
-            bomb_map = [(bomb[0] + i, bomb[1]) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
-                    + [(bomb[0], bomb[1] + i) for bomb in bomb_map for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)]
             #print(agent_pos, new_agent_pos, [(x.x, x.y) for x in self.bombs], agent_pos in bomb_map,bomb_map)
             if agent_pos in bomb_map and not new_agent_pos in bomb_map:
                 agent.add_event(e.MOVED_OUT_BOMB_RANGE)
@@ -193,9 +204,6 @@ class GenericWorld:
                 agent.add_event(e.MOVED_CLOSER_TO_ENEMY)
         
 
-        exp = [[x,y] for exp in self.explosions for (x,y) in exp.blast_coords if exp.is_dangerous()]
-        if not list(agent_pos) in exp and list(new_agent_pos) in exp:
-            agent.add_event(e.MOVED_INTO_EXPLOSION)
 
         #exp_pos = [[x,y] for exp2 in exp for (x,y) in exp2.blast_coords if exp2.is_dangerous()]
         #"""print(list(agent_pos) in exp_pos, list(new_agent_pos) in exp_pos, exp_pos)

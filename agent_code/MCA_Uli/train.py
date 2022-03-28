@@ -178,7 +178,8 @@ def reward_from_events(self, events: List[str]) -> int:
         e.STAYED_OUT_BOMB_RANGE:25,
         e.MOVED_CLOSER_TO_ENEMY: 10,
         e.MOVED_AWAY_FROM_ENEMY: -5,
-        e.STAYED_IN_BOMB_RANGE: -20,
+        e.STAYED_IN_BOMB_RANGE: -50,
+        e.PLACED_BOMB_WITHOUT_SAFE_SPOT: -100,
     }
     reward_sum = 0
     for event in events:
