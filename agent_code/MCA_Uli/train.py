@@ -31,19 +31,11 @@ def setup_training(self):
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
-    # Example: Setup an array that will note transition tuples
-    # (s, a, r, s')
-    #self.transitions = deque(maxlen=TRANSITION_HISTORY_SIZE)
-
-    # [can move in direction, closest coin direction]
-    #self.transitions = deque(maxlen=TRANSITION_HISTORY_SIZE)
     self.gamma = 0.6
     self.Transitions = []
 
-    # Features: [Coin distance, in Bomb range, (closest) bomb timer, (closest) bomb distance, enemy distance, crate distance, new position in explosion]
-    self.V = {tuple([i,j,k,l,m,n,o,p,q]):float() for i in range(-1, 6) for j in range(0,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2) for p in range(-1,6) for q in range(0,2)}
-    self.returns = {tuple([i,j,k,l,m,n,o,p,q]):list() for i in range(-1,6) for j in range(0,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2) for p in range(-1,6) for q in range(0,2)}
 
+    # load file if it exists, to continue a running training session
     if os.path.isfile("MCA-V.pt"):
         print("model found")
         with open("MCA-V.pt", "rb") as file:
@@ -51,14 +43,19 @@ def setup_training(self):
         with open("MCA-returns.pt", "rb") as file:
             self.returns = pickle.load(file)
 
-        #print(len(self.V.keys()))
-        nz = 0
+        # Some debug info (commented for production mode)
+        """nz = 0
         for state in self.V.keys():
             #print(self.V[state])
             if self.V[state] != 0:
                 print(state, self.V[state])
                 nz += 1
-        print("Found %s nonzero entries" % nz)
+        print("Found %s nonzero entries" % nz)"""
+    else:
+        # Features: [Coin distance, in Bomb range, (closest) bomb timer, (closest) bomb distance,
+        #            (closest) enemy distance, (closest) crate distance, field in explosion, closest safe spot, safespot reachable within (closest) bomb timer]
+        self.V = {tuple([i,j,k,l,m,n,o,p,q]):float() for i in range(-1, 6) for j in range(0,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2) for p in range(-1,6) for q in range(0,2)}
+        self.returns = {tuple([i,j,k,l,m,n,o,p,q]):list() for i in range(-1,6) for j in range(0,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2) for p in range(-1,6) for q in range(0,2)}
 
 
 
@@ -73,7 +70,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     settings.py to see what events are tracked. You can hand out rewards to your
     agent based on these events and your knowledge of the (new) game state.
 
-    This is *one* of the places where you could update your agent.
+    This method only pushes the state with action and events into a list for the whole game
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     :param old_game_state: The state that was passed to the last call of `act`.
@@ -82,13 +79,8 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     :param events: The events that occurred when going from  `old_game_state` to `new_game_state`
     """
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
-    features = state_to_features(new_game_state, events)
-    # Idea: Add your own events to hand out rewards
-    #if ...:
-    #    events.append(PLACEHOLDER_EVENT)
 
-    # state_to_features is defined in callbacks.py
-    #self.transitions.append(Transition(state_to_features(old_game_state), self_action, state_to_features(new_game_state), reward_from_events(self, events)))
+    # Add transition to list of all transitions in this game
     self.Transitions += [[state_to_features(old_game_state), self_action, state_to_features(new_game_state,events), reward_from_events(self, events)]]
 
 
@@ -100,23 +92,19 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     This is similar to game_events_occurred. self.events will contain all events that
     occurred during your agent's final step.
 
-    This is *one* of the places where you could update your agent.
-    This is also a good place to store an agent that you updated.
+    Here's where the learning takes place. Uses standard Monte-Carlo techniques
 
     :param self: The same object that is passed to all of your callbacks.
     """
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
     self.Transitions += [[state_to_features(last_game_state, events), last_action, state_to_features(last_game_state), reward_from_events(self, events)]]
-    #self.Transitions += [[state_to_features(last_game_state, events), last_action, None, reward_from_events(self, events)]]
 
-    start = datetime.now()
+    
+    
+    idx = 2 # index of state in Transition list
+    G = 0 # initialize return Value
 
-    #self.logger.debug("Last game feat", state_to_features(last_game_state,events), events, reward_from_events(self,events))
-    #self.logger.debug("Last action",last_action)
-
-    idx = 2
-
-    G = 0
+    # Work backwards through all Transition in game and assign Values to corresponding states
     for i, step in enumerate(self.Transitions[::-1]):
         G = self.gamma*G + step[3]
         if tuple(step[idx]) not in [tuple(x[idx]) for x in self.Transitions[::-1][len(self.Transitions) - i:]]:
@@ -124,16 +112,10 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
             self.logger.debug("SETTING STATE: " + str(step[idx]) + " TO Value: " + str(np.average(self.returns[tuple(step[idx])])))
             self.V[tuple(step[idx])] = np.average(self.returns[tuple(step[idx])])
 
-        #print(self.V[tuple(idx[0].astype(int))])               
-        pass
-    
-
-    # Store the model
-    saving_start = datetime.now()
-    # gracefully interrupt
-
+    # If on hits Interrupt while saving this might lead to a corrupted save state.
+    # To avoid this, Keyboard Interrupt is detected an the file stored gracefully before quitting
     try:
-        if last_game_state["round"] % 100 == 0:
+        if last_game_state["round"] % 200 == 0: # as the file get's large and saving takes time, only save every 200 games
             with open("MCA-V.pt", "wb") as file:
                 pickle.dump(self.V, file)
             with open("MCA-returns.pt", "wb") as file:
@@ -146,41 +128,40 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
             pickle.dump(self.returns, file)
         sys.exit()
 
-    #print(datetime.now()-start, datetime.now() - saving_start)
     self.Transitions = []
 
 
 
 def reward_from_events(self, events: List[str]) -> int:
     """
-    *This is not a required function, but an idea to structure your code.*
+    Give rewards according to events
 
-    Here you can modify the rewards your agent get so as to en/discourage
-    certain behavior.
+    :param self: This object is passed to all callbacks and you can set arbitrary values.
+    :param events: The events that occurred when going from  `old_game_state` to `new_game_state`
     """
     game_rewards = {
-        e.COIN_COLLECTED: 20,
-        e.CRATE_DESTROYED: 30,
-        e.COIN_FOUND: 10,
-        #e.INVALID_ACTION: -1,
-        # slightly discourage waiting
-        #e.WAITED: -0.1,
-        e.BOMB_DROPPED: 50,
-        e.KILLED_OPPONENT: 100,
-        #e.SURVIVED_ROUND: 1,
+        e.COIN_COLLECTED: 50,
+        e.CRATE_DESTROYED: 50,
+        e.COIN_FOUND: 20,
+        e.BOMB_DROPPED: 100, # encourage playing with bombs
+                             # discouraging killing oneself happens later
+        e.KILLED_OPPONENT: 200,
+        e.SURVIVED_ROUND: 300,
         e.OPPONENT_ELIMINATED: 5,
-        e.KILLED_SELF: -100,
-        e.GOT_KILLED: -100,
+        e.KILLED_SELF: -75,
+        e.GOT_KILLED: -75,
         e.MOVED_INTO_EXPLOSION: -100,
         e.MOVED_IN_BOMB_RANGE: -50,
         e.MOVED_OUT_BOMB_RANGE: 50,
 
         e.STAYED_OUT_BOMB_RANGE:25,
-        e.MOVED_CLOSER_TO_ENEMY: 10,
+        e.MOVED_CLOSER_TO_ENEMY: 20,
         e.MOVED_AWAY_FROM_ENEMY: -5,
         e.STAYED_IN_BOMB_RANGE: -50,
-        e.PLACED_BOMB_WITHOUT_SAFE_SPOT: -100,
+        e.PLACED_BOMB_WITHOUT_SAFE_SPOT: -200,
     }
+
+    # calculate reward sum
     reward_sum = 0
     for event in events:
         if event in game_rewards:
