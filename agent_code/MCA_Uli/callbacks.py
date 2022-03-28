@@ -56,8 +56,6 @@ def setup(self):
                 
         
 
-@jit
-#(target ="cuda") 
 def act(self, game_state: dict) -> str:
     """
     Your agent should parse the input, think, and take a decision.
@@ -155,8 +153,6 @@ def act(self, game_state: dict) -> str:
     self.logger.debug("ACTION: " + str(action))
     return action
 
-@jit
-#(target ="cuda") 
 def state_to_features(game_state: dict, events = None) -> np.array:
     """
     *This is not a required function, but an idea to structure your code.*
@@ -172,8 +168,8 @@ def state_to_features(game_state: dict, events = None) -> np.array:
     :return: np.array
     """
 
-    # features: [distance to closest coin, in bomb range, timeout of closest bomb, distance to closest bomb, distance to enemy, distance to crate, in explosion]
-    features = np.zeros([7])
+    # features: [distance to closest coin, in bomb range, timeout of closest bomb, distance to closest bomb, distance to enemy, distance to crate, in explosion, distance to closest safe spot, ]
+    features = np.zeros([9])
     # This is the dict before the game begins and after it ends
     if game_state is None:
         return None    
@@ -187,19 +183,21 @@ def state_to_features(game_state: dict, events = None) -> np.array:
         features[0] = -1
     else:
         closest_coin_pos = game_state["coins"][np.argmin(((game_state["coins"]-np.array(agent_pos))**2).sum(axis=1))]
-        features[0] = np.min([10, np.sum(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))])
+        features[0] = np.min([5, np.sum(np.abs(np.array(agent_pos) - np.array(closest_coin_pos)))])
 
     #find closest bomb
+    bomb_fields = []
+    bomb_map = []
     if not game_state["bombs"] or len(game_state["bombs"]) == 0:
         features[1] = 0
         features[2] = -1
     else:        
         bomb_map, timers = (np.array(game_state["bombs"])[:,0], np.array(game_state["bombs"])[:,1])
-        bomb_fields = np.array([(x[0] + i, x[1]) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
-                + [(x[0], x[1] + i) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER, s.BOMB_POWER + 1)])
+        bomb_fields = [(x[0] + i, x[1]) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
+                + [(x[0], x[1] + i) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER, s.BOMB_POWER + 1)]
         d = np.array([[x[0],x[1]] for x in np.array(game_state["bombs"])[:,0]]) - np.array(agent_pos)
         features[3] = np.min([s.BOMB_POWER + 4,np.sum(np.abs(d[np.argmin(np.sum(d**2, axis=1))]))])
-        features[1] = int(agent_pos in bomb_fields)
+        features[1] = int(list(agent_pos) in bomb_fields)
         features[2] =  timers[np.argmin(np.sum(d**2,axis=1))]
     
     # Enemy distance
@@ -234,9 +232,54 @@ def state_to_features(game_state: dict, events = None) -> np.array:
 
     if list(agent_pos) in explosions:
         features[6] = 1
+    
+    # Find (closest) walkable safe spots
+    tested = []
+    safe_spots = []
+    paths = {}
+    find_walkable_safe_spots(list(agent_pos), tested,safe_spots, bomb_fields, explosions, game_state["field"],paths)
+    if len(safe_spots) == 0:
+        features[7] = -1
+        features[8] = 0
+    else:
+        d = [len(paths[key]) - 1 for key in paths]
+        features[7] = d[np.argmin(d)] if d[np.argmin(d)] < 6 else -1
+        if features[7] <= features[2]:
+            features[8] = 0
+        else:
+            features[8] = 1
+
 
     if events:
         if e.COIN_COLLECTED in events:
             features[0] = 0
 
     return features.astype(int)
+
+def find_walkable_safe_spots(current_pos, tested, safe, bomb_fields, explosions, field, paths, path = []):
+    path = copy.deepcopy(path)
+    path += [current_pos]
+    if tuple(current_pos) in paths.keys():
+        paths[tuple(current_pos)] += path
+    else:
+        paths[tuple(current_pos)] = path
+
+    tested += [current_pos]
+    if is_safe(current_pos,bomb_fields, explosions):
+        safe += [current_pos] 
+    if field[current_pos[0] - 1, current_pos[1]] == 0 and [current_pos[0] - 1, current_pos[1]] not in tested:
+
+        find_walkable_safe_spots([current_pos[0]-1, current_pos[1]], tested,safe,bomb_fields,explosions,field,paths,path)
+    if field[current_pos[0] + 1, current_pos[1]] == 0 and [current_pos[0] + 1, current_pos[1]] not in tested:
+        find_walkable_safe_spots([current_pos[0]+1, current_pos[1]], tested,safe,bomb_fields,explosions,field,paths,path)
+    if field[current_pos[0], current_pos[1] - 1] == 0 and [current_pos[0], current_pos[1] - 1] not in tested:
+        find_walkable_safe_spots([current_pos[0], current_pos[1]-1], tested,safe,bomb_fields,explosions,field,paths,path)
+    if field[current_pos[0], current_pos[1] + 1] == 0 and [current_pos[0], current_pos[1] + 1] not in tested:
+        find_walkable_safe_spots([current_pos[0], current_pos[1]+1], tested,safe,bomb_fields,explosions,field,paths,path)
+
+#def walkable_distance_to_safe_spot(agent_pos, safe_spots, )
+    
+
+def is_safe(current_pos,bomb_fields,explosions):
+    if tuple(current_pos) not in bomb_fields and list(current_pos) not in explosions:
+        return True

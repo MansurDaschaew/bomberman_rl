@@ -1,10 +1,11 @@
-from _typeshed import IdentityFunction
 import os
 import pickle
 import random
 
 import numpy as np
 import scipy.special
+
+import gym
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
@@ -129,7 +130,7 @@ def state_to_features(game_state: dict) -> np.array:
     #return stacked_channels.reshape(-1)
     return features
 
-print(eps_greedy([1,2,3], 0.05))
+#print(eps_greedy([1,2,3], 0.05))
 
 #train /setup 
 if __name__ == '__main__':

@@ -40,9 +40,9 @@ def setup_training(self):
     self.gamma = 0.6
     self.Transitions = []
 
-    #self.V = np.zeros([2,2,2,2,2,2,2,2])
-    self.V = {tuple([i,j,k,l,m,n,o]):float() for i in range(-1, 11) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2)}
-    self.returns = {tuple([i,j,k,l,m,n,o]):list() for i in range(-1,11) for j in range(-1,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2)}
+    # Features: [Coin distance, in Bomb range, (closest) bomb timer, (closest) bomb distance, enemy distance, crate distance, new position in explosion]
+    self.V = {tuple([i,j,k,l,m,n,o,p,q]):float() for i in range(-1, 6) for j in range(0,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2) for p in range(-1,6) for q in range(0,2)}
+    self.returns = {tuple([i,j,k,l,m,n,o,p,q]):list() for i in range(-1,6) for j in range(0,2) for k in range(-1,s.BOMB_TIMER + 1) for l in range(-1, s.BOMB_POWER + 5) for m in range(-1,15) for n in range(-1,6) for o in range(0,2) for p in range(-1,6) for q in range(0,2)}
 
     if os.path.isfile("MCA-V.pt"):
         print("model found")

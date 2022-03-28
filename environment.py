@@ -126,8 +126,6 @@ class GenericWorld:
             for obstacle in self.bombs + self.active_agents:
                 is_free = is_free and (obstacle.x != x or obstacle.y != y)
         return is_free
-    @jit
-    #(target="cuda")
     def perform_agent_action(self, agent: Agent, action: str):
 
         # Custom events
