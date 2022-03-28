@@ -165,7 +165,7 @@ def reward_from_events(self, events: List[str]) -> int:
         #e.INVALID_ACTION: -1,
         # slightly discourage waiting
         #e.WAITED: -0.1,
-        e.BOMB_DROPPED: 10,
+        e.BOMB_DROPPED: 50,
         e.KILLED_OPPONENT: 100,
         #e.SURVIVED_ROUND: 1,
         e.OPPONENT_ELIMINATED: 5,
