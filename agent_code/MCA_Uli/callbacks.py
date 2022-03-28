@@ -66,7 +66,7 @@ def act(self, game_state: dict) -> str:
     :return: The action to take as a string.
     """
     # todo Exploration vs exploitation
-    random_prob = .2
+    random_prob = .3
 
     if self.train and random.random() < random_prob:
         self.logger.debug("Choosing action purely at random.")
@@ -191,6 +191,7 @@ def state_to_features(game_state: dict, events = None) -> np.array:
     if not game_state["bombs"] or len(game_state["bombs"]) == 0:
         features[1] = 0
         features[2] = -1
+        features[3] = -1
     else:        
         bomb_map, timers = (np.array(game_state["bombs"])[:,0], np.array(game_state["bombs"])[:,1])
         bomb_fields = [(x[0] + i, x[1]) for x in np.array(game_state["bombs"])[:,0] for i in range(-s.BOMB_POWER,s.BOMB_POWER + 1)] \
@@ -242,12 +243,18 @@ def state_to_features(game_state: dict, events = None) -> np.array:
         features[7] = -1
         features[8] = 0
     else:
-        d = [len(paths[key]) - 1 for key in paths]
+        d = [len(paths[key]) - 1 for key in paths if list(key) in safe_spots]
         features[7] = d[np.argmin(d)] if d[np.argmin(d)] < 6 else -1
         if features[7] <= features[2]:
             features[8] = 0
         else:
             features[8] = 1
+    """if features[3] == 0:
+        print("BOMBS:", bomb_fields, game_state["bombs"])
+        print("EXPLOSIONS:", explosions)
+        print("SAFE_SPOTS:", safe_spots)
+        print(agent_pos, features)
+        print()"""
 
 
     if events:
@@ -263,6 +270,9 @@ def find_walkable_safe_spots(current_pos, tested, safe, bomb_fields, explosions,
         paths[tuple(current_pos)] += path
     else:
         paths[tuple(current_pos)] = path
+
+    if len(safe) > 5:
+        return 0
 
     tested += [current_pos]
     if is_safe(current_pos,bomb_fields, explosions):

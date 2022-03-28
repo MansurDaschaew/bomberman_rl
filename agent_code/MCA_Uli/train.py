@@ -160,7 +160,7 @@ def reward_from_events(self, events: List[str]) -> int:
     """
     game_rewards = {
         e.COIN_COLLECTED: 20,
-        e.CRATE_DESTROYED: 50,
+        e.CRATE_DESTROYED: 30,
         e.COIN_FOUND: 10,
         #e.INVALID_ACTION: -1,
         # slightly discourage waiting
@@ -169,9 +169,9 @@ def reward_from_events(self, events: List[str]) -> int:
         e.KILLED_OPPONENT: 100,
         #e.SURVIVED_ROUND: 1,
         e.OPPONENT_ELIMINATED: 5,
-        e.KILLED_SELF: -50,
-        e.GOT_KILLED: -30,
-        e.MOVED_INTO_EXPLOSION: -50,
+        e.KILLED_SELF: -100,
+        e.GOT_KILLED: -100,
+        e.MOVED_INTO_EXPLOSION: -100,
         e.MOVED_IN_BOMB_RANGE: -30,
         e.MOVED_OUT_BOMB_RANGE: 30,
 
